@@ -1,3 +1,4 @@
+
 import { Bell, Package, User, Menu, Home, ChevronRight, Maximize, Minimize } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -177,7 +178,13 @@ export function Header() {
     let currentPath = '';
     pathSegments.forEach(segment => {
       currentPath += `/${segment}`;
-      const name = segment.charAt(0).toUpperCase() + segment.slice(1).replace('-', ' ');
+      let name = segment.charAt(0).toUpperCase() + segment.slice(1).replace('-', ' ');
+      
+      // Special case for reports route
+      if (segment === 'reports') {
+        name = 'Ask AI';
+      }
+      
       breadcrumbs.push({ name, path: currentPath });
     });
     

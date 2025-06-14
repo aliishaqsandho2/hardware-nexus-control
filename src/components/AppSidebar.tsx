@@ -1,3 +1,4 @@
+
 import {
   Sidebar,
   SidebarContent,
@@ -31,7 +32,8 @@ import {
   UserCheck,
   Database,
   PieChart,
-  ShoppingBag
+  ShoppingBag,
+  MessageCircle
 } from "lucide-react"
 import { useNavigate, useLocation } from "react-router-dom"
 import { useToast } from "@/hooks/use-toast"
@@ -121,9 +123,9 @@ const financeItems: MenuItem[] = [
 // Analytics & Reports
 const analyticsItems: MenuItem[] = [
   {
-    title: "Reports",
+    title: "Ask AI",
     url: "/reports",
-    icon: BarChart3,
+    icon: MessageCircle,
   },
   {
     title: "Sales Analytics",

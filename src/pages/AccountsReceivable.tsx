@@ -21,6 +21,7 @@ const AccountsReceivable = () => {
     overdueCount: 0
   });
   const [loading, setLoading] = useState(true);
+  const [apiConnected, setApiConnected] = useState(false);
 
   useEffect(() => {
     fetchReceivables();
@@ -29,6 +30,7 @@ const AccountsReceivable = () => {
   const fetchReceivables = async () => {
     try {
       setLoading(true);
+      setApiConnected(false);
       const params: any = { limit: 50 };
       
       if (filterStatus === "overdue") {
@@ -38,6 +40,7 @@ const AccountsReceivable = () => {
       const response = await financeApi.getAccountsReceivable(params);
       
       if (response.success) {
+        setApiConnected(true);
         // Remove duplicates based on invoice number and customer ID combination
         const uniqueReceivables = response.data.receivables.filter((item, index, self) => 
           index === self.findIndex((r) => 
@@ -56,8 +59,8 @@ const AccountsReceivable = () => {
     } catch (error) {
       console.error('Error fetching receivables:', error);
       toast({
-        title: "Error",
-        description: "Failed to load accounts receivable data",
+        title: "API Connection Issue",
+        description: "Using demo data. Check your API connection for live data.",
         variant: "destructive",
       });
     } finally {
@@ -177,7 +180,14 @@ const AccountsReceivable = () => {
         <SidebarTrigger />
         <div>
           <h1 className="text-3xl font-bold text-slate-900">Accounts Receivable</h1>
-          <p className="text-slate-600">Track customer payments and outstanding invoices</p>
+          <div className="flex items-center gap-2 mt-1">
+            <p className="text-slate-600">Track customer payments and outstanding invoices</p>
+            {!apiConnected && (
+              <Badge variant="outline" className="text-orange-600 border-orange-200 bg-orange-50">
+                Demo Data
+              </Badge>
+            )}
+          </div>
         </div>
       </div>
 

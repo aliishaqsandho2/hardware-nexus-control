@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
@@ -11,6 +10,7 @@ interface FilteredProductsModalProps {
   title: string;
   filterType: 'lowStock' | 'outOfStock' | 'inStock' | 'all';
   onFetchAllProducts?: () => Promise<any[]>;
+  products?: any[]; // Add optional products prop
 }
 
 export const FilteredProductsModal: React.FC<FilteredProductsModalProps> = ({
@@ -18,24 +18,27 @@ export const FilteredProductsModal: React.FC<FilteredProductsModalProps> = ({
   onOpenChange,
   title,
   filterType,
-  onFetchAllProducts
+  onFetchAllProducts,
+  products = [] // Default to empty array
 }) => {
-  const [allProducts, setAllProducts] = useState<any[]>([]);
+  const [allProducts, setAllProducts] = useState<any[]>(products);
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
     if (open && onFetchAllProducts) {
       fetchAllProducts();
+    } else if (products.length > 0) {
+      setAllProducts(products);
     }
-  }, [open, onFetchAllProducts]);
+  }, [open, onFetchAllProducts, products]);
 
   const fetchAllProducts = async () => {
     if (!onFetchAllProducts) return;
     
     try {
       setLoading(true);
-      const products = await onFetchAllProducts();
-      setAllProducts(Array.isArray(products) ? products : []);
+      const fetchedProducts = await onFetchAllProducts();
+      setAllProducts(Array.isArray(fetchedProducts) ? fetchedProducts : []);
     } catch (error) {
       console.error('Failed to fetch all products:', error);
       setAllProducts([]);

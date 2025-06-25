@@ -358,16 +358,25 @@ export const customerApi = {
     return apiRequest<PaginatedResponse<Customer>>(`/customers${query ? `?${query}` : ''}`);
   },
 
-  // Get customer by ID
+  // Get customer by ID with enhanced balance information
   getCustomerById: (id: number) =>
-    apiRequest<ApiResponse<Customer>>(`/customers/${id}`),
+    apiRequest<ApiResponse<Customer & { balanceHistory?: any[] }>>(`/customers/${id}?includeBalance=true`),
 
   // Create new customer
-  createCustomer: (customer: Partial<Customer>) =>
-    apiRequest<ApiResponse<Customer>>('/customers', {
+  createCustomer: (customer: Partial<Customer>) => {
+    // Ensure proper initialization of balance fields
+    const customerData = {
+      ...customer,
+      currentBalance: 0,
+      totalPurchases: 0,
+      status: 'active'
+    };
+    
+    return apiRequest<ApiResponse<Customer>>('/customers', {
       method: 'POST',
-      body: JSON.stringify(customer),
-    }),
+      body: JSON.stringify(customerData),
+    });
+  },
 
   // Update customer
   updateCustomer: (id: number, customer: Partial<Customer>) =>

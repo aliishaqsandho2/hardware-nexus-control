@@ -6,6 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Plus, Pin, PinOff, Info, AlertTriangle } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { ProductDetailsModal } from "./ProductDetailsModal";
+import { useStockManagement } from '@/hooks/useStockManagement';
 
 interface ProductCardProps {
   product: any;
@@ -27,7 +28,9 @@ export const ProductCard: React.FC<ProductCardProps> = ({
   onAddCustomQuantity
 }) => {
   const { toast } = useToast();
+  const { validateStock } = useStockManagement();
   const [isDetailsOpen, setIsDetailsOpen] = useState(false);
+  const [isValidating, setIsValidating] = useState(false);
 
   const handleQuantityInputChange = (value: string) => {
     // Allow decimal numbers
@@ -36,10 +39,37 @@ export const ProductCard: React.FC<ProductCardProps> = ({
     }
   };
 
-  const handleAddCustomQuantity = () => {
+  const handleAddCustomQuantity = async () => {
     const quantity = parseFloat(quantityInput);
     
     if (quantityInput && !isNaN(quantity) && quantity > 0) {
+      // Validate stock before adding to cart
+      if (!product.incompleteQuantity && !product.needsQuantityUpdate) {
+        setIsValidating(true);
+        try {
+          const validation = await validateStock(product.id, quantity);
+          
+          if (!validation.isValid) {
+            toast({
+              title: "Insufficient Stock",
+              description: validation.message,
+              variant: "destructive"
+            });
+            return;
+          }
+        } catch (error) {
+          console.error('Stock validation error:', error);
+          toast({
+            title: "Validation Error",
+            description: "Could not validate stock availability",
+            variant: "destructive"
+          });
+          return;
+        } finally {
+          setIsValidating(false);
+        }
+      }
+      
       onAddCustomQuantity(product);
     } else {
       toast({
@@ -50,15 +80,43 @@ export const ProductCard: React.FC<ProductCardProps> = ({
     }
   };
 
-  const handleQuickAdd = () => {
+  const handleQuickAdd = async () => {
     // Use quantity from input if available, otherwise default to 1
     const quantity = quantityInput && !isNaN(parseFloat(quantityInput)) ? parseFloat(quantityInput) : 1;
+    
+    // Validate stock before adding to cart (unless incomplete quantity)
+    if (!product.incompleteQuantity && !product.needsQuantityUpdate) {
+      setIsValidating(true);
+      try {
+        const validation = await validateStock(product.id, quantity);
+        
+        if (!validation.isValid) {
+          toast({
+            title: "Insufficient Stock",
+            description: validation.message,
+            variant: "destructive"
+          });
+          return;
+        }
+      } catch (error) {
+        console.error('Stock validation error:', error);
+        toast({
+          title: "Validation Error",
+          description: "Could not validate stock availability",
+          variant: "destructive"
+        });
+        return;
+      } finally {
+        setIsValidating(false);
+      }
+    }
+    
     onAddToCart(product, quantity);
   };
 
   // Check if product has incomplete quantity information
   const hasIncompleteQuantity = product.incompleteQuantity || product.needsQuantityUpdate;
-  const isOutOfStock = product.stock <= 0;
+  const isOutOfStock = !hasIncompleteQuantity && (product.stock || 0) <= 0;
 
   return (
     <>
@@ -67,6 +125,8 @@ export const ProductCard: React.FC<ProductCardProps> = ({
           ? 'border-blue-300 bg-blue-50 dark:border-blue-600 dark:bg-blue-900/20' 
           : hasIncompleteQuantity
           ? 'border-orange-300 bg-orange-50 dark:border-orange-600 dark:bg-orange-900/20'
+          : isOutOfStock
+          ? 'border-red-300 bg-red-50 dark:border-red-600 dark:bg-red-900/20'
           : 'border-border bg-card'
       } relative`}>
         {/* Pin Button */}
@@ -93,10 +153,16 @@ export const ProductCard: React.FC<ProductCardProps> = ({
           <Info className="h-2.5 w-2.5 text-muted-foreground hover:text-blue-600" />
         </Button>
 
-        {/* Incomplete Quantity Warning */}
-        {hasIncompleteQuantity && (
-          <div className="absolute top-1 left-1 h-5 w-5 z-10" title={product.quantityNote || "Incomplete quantity information"}>
-            <AlertTriangle className="h-2.5 w-2.5 text-orange-600" />
+        {/* Stock Status Warning */}
+        {(hasIncompleteQuantity || isOutOfStock) && (
+          <div className="absolute top-1 left-1 h-5 w-5 z-10" title={
+            hasIncompleteQuantity 
+              ? (product.quantityNote || "Incomplete quantity information")
+              : "Out of stock"
+          }>
+            <AlertTriangle className={`h-2.5 w-2.5 ${
+              isOutOfStock ? 'text-red-600' : 'text-orange-600'
+            }`} />
           </div>
         )}
         
@@ -119,6 +185,10 @@ export const ProductCard: React.FC<ProductCardProps> = ({
                 {hasIncompleteQuantity ? (
                   <span className="text-orange-600 font-medium">
                     Quantity unknown
+                  </span>
+                ) : isOutOfStock ? (
+                  <span className="text-red-600 font-medium">
+                    Out of stock
                   </span>
                 ) : (
                   <>
@@ -144,12 +214,12 @@ export const ProductCard: React.FC<ProductCardProps> = ({
                 value={quantityInput}
                 onChange={(e) => handleQuantityInputChange(e.target.value)}
                 className="h-6 text-[10px] flex-1 bg-background border-input px-1"
-                disabled={!hasIncompleteQuantity && product.stock <= 0}
+                disabled={isOutOfStock && !hasIncompleteQuantity}
               />
               <Button
                 onClick={handleAddCustomQuantity}
                 className="h-6 w-6 p-0 bg-green-600 hover:bg-green-700 text-white flex-shrink-0"
-                disabled={!hasIncompleteQuantity && product.stock <= 0 || !quantityInput}
+                disabled={isOutOfStock && !hasIncompleteQuantity || !quantityInput || isValidating}
               >
                 <Plus className="h-2.5 w-2.5" />
               </Button>
@@ -161,12 +231,18 @@ export const ProductCard: React.FC<ProductCardProps> = ({
               className={`w-full text-white text-[10px] h-6 ${
                 hasIncompleteQuantity 
                   ? 'bg-orange-600 hover:bg-orange-700' 
+                  : isOutOfStock
+                  ? 'bg-red-600 hover:bg-red-700'
                   : 'bg-blue-600 hover:bg-blue-700'
               }`}
-              disabled={!hasIncompleteQuantity && product.stock <= 0}
+              disabled={isOutOfStock && !hasIncompleteQuantity || isValidating}
             >
-              {hasIncompleteQuantity ? (
+              {isValidating ? (
+                'Validating...'
+              ) : hasIncompleteQuantity ? (
                 <>Quick Add ({quantityInput || '1'} {product.unit}) ⚠️</>
+              ) : isOutOfStock ? (
+                'Out of Stock'
               ) : (
                 <>Quick Add ({quantityInput || '1'} {product.unit})</>
               )}

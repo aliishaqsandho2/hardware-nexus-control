@@ -21,6 +21,7 @@ import { useToast } from "@/hooks/use-toast";
 import { productsApi, categoriesApi, unitsApi } from "@/services/api";
 import { ProductDetailsModal } from "@/components/sales/ProductDetailsModal";
 import { FilteredProductsModal } from "@/components/FilteredProductsModal";
+import { EnhancedExportModal } from "@/components/products/EnhancedExportModal";
 import { Eye } from "lucide-react";
 import { generateSKU } from "@/utils/skuGenerator";
 import jsPDF from 'jspdf';
@@ -32,8 +33,7 @@ const Products = () => {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [isCategoryDialogOpen, setIsCategoryDialogOpen] = useState(false);
-  const [isPdfExportDialogOpen, setIsPdfExportDialogOpen] = useState(false);
-  const [selectedExportCategory, setSelectedExportCategory] = useState("all");
+  const [isEnhancedExportOpen, setIsEnhancedExportOpen] = useState(false);
   const [selectedProduct, setSelectedProduct] = useState<any>(null);
   const [products, setProducts] = useState<any[]>([]);
   const [categories, setCategories] = useState<any[]>([]);
@@ -166,138 +166,197 @@ const Products = () => {
     }
   };
 
-  const handleStockExportPDF = async (categoryToExport = "all") => {
+  const handleEnhancedExport = async (selectedCategories: string[], exportType: string) => {
     try {
       setExportLoading(true);
+      console.log('Starting enhanced PDF export for categories:', selectedCategories, 'type:', exportType);
       
-      // Fetch all products for export (without pagination)
-      const params: any = { 
-        limit: 10000, // Large number to get all products
-        status: 'active' 
-      };
+      // If multiple specific categories selected, we need to fetch and combine them
+      let allProductsToExport: any[] = [];
       
-      // Add category filter if not "all"
-      if (categoryToExport !== "all") {
-        params.category = categoryToExport;
+      if (selectedCategories.includes("all")) {
+        // Fetch all products
+        const params = { 
+          limit: 10000,
+          status: 'active' 
+        };
+        
+        const response = await productsApi.getAll(params);
+        if (response.success) {
+          allProductsToExport = response.data.products || response.data || [];
+        }
+      } else {
+        // Fetch products for each selected category
+        for (const category of selectedCategories) {
+          const params = { 
+            limit: 10000,
+            status: 'active',
+            category: category
+          };
+          
+          const response = await productsApi.getAll(params);
+          if (response.success) {
+            const categoryProducts = response.data.products || response.data || [];
+            allProductsToExport = [...allProductsToExport, ...categoryProducts];
+          }
+        }
       }
       
-      const response = await productsApi.getAll(params);
+      console.log('Products to export:', allProductsToExport.length);
       
-      if (response.success) {
-        const allProducts = response.data.products || response.data || [];
-        
-        // Create PDF
-        const pdf = new jsPDF();
-        const pageWidth = pdf.internal.pageSize.width;
-        const pageHeight = pdf.internal.pageSize.height;
-        const margin = 20;
-        let yPos = margin;
+      if (!Array.isArray(allProductsToExport) || allProductsToExport.length === 0) {
+        toast({
+          title: "No Products Found",
+          description: "No products available for export.",
+          variant: "destructive"
+        });
+        return;
+      }
+      
+      // Create PDF
+      const pdf = new jsPDF();
+      const pageWidth = pdf.internal.pageSize.width;
+      const pageHeight = pdf.internal.pageSize.height;
+      const margin = 20;
+      let yPos = margin;
 
-        // Title
-        pdf.setFontSize(20);
-        pdf.setFont('helvetica', 'bold');
-        const title = categoryToExport === "all" ? 'Complete Stock Export Report' : `Stock Report - ${categoryToExport}`;
-        pdf.text(title, pageWidth / 2, yPos, { align: 'center' });
-        yPos += 15;
+      // Title
+      pdf.setFontSize(20);
+      pdf.setFont('helvetica', 'bold');
+      const title = selectedCategories.includes("all") 
+        ? 'Complete Stock Export Report' 
+        : `Stock Report - ${selectedCategories.join(', ')}`;
+      pdf.text(title, pageWidth / 2, yPos, { align: 'center' });
+      yPos += 15;
 
-        // Export info
-        pdf.setFontSize(10);
-        pdf.setFont('helvetica', 'normal');
-        pdf.text(`Export Date: ${new Date().toLocaleString()}`, margin, yPos);
+      // Export info
+      pdf.setFontSize(10);
+      pdf.setFont('helvetica', 'normal');
+      pdf.text(`Export Date: ${new Date().toLocaleString()}`, margin, yPos);
+      yPos += 8;
+      pdf.text(`Total Products: ${allProductsToExport.length}`, margin, yPos);
+      yPos += 8;
+      pdf.text(`Export Type: ${exportType}`, margin, yPos);
+      yPos += 8;
+      if (!selectedCategories.includes("all")) {
+        pdf.text(`Categories: ${selectedCategories.join(', ')}`, margin, yPos);
         yPos += 8;
-        pdf.text(`Total Products: ${allProducts.length}`, margin, yPos);
-        yPos += 8;
-        if (categoryToExport !== "all") {
-          pdf.text(`Category: ${categoryToExport}`, margin, yPos);
-          yPos += 8;
+      }
+
+      // Calculate total stock value
+      const totalStockValue = allProductsToExport.reduce((total: number, product: any) => {
+        const stock = product.stock || 0;
+        const price = product.costPrice || product.price || 0;
+        return total + (stock * price);
+      }, 0);
+      pdf.text(`Total Stock Value: PKR ${totalStockValue.toLocaleString()}`, margin, yPos);
+      yPos += 15;
+
+      // Table headers based on export type
+      pdf.setFontSize(8);
+      pdf.setFont('helvetica', 'bold');
+      let headers: string[];
+      let colWidths: number[];
+      
+      if (exportType === 'summary') {
+        headers = ['Product Name', 'SKU', 'Category', 'Stock'];
+        colWidths = [70, 40, 40, 30];
+      } else if (exportType === 'stock') {
+        headers = ['Product Name', 'Stock', 'Unit', 'Price', 'Value'];
+        colWidths = [60, 30, 20, 30, 40];
+      } else {
+        headers = ['Product Name', 'SKU', 'Category', 'Stock', 'Unit', 'Price', 'Value'];
+        colWidths = [50, 30, 25, 20, 15, 25, 25];
+      }
+      
+      let xPos = margin;
+      headers.forEach((header, index) => {
+        pdf.text(header, xPos, yPos);
+        xPos += colWidths[index];
+      });
+      yPos += 8;
+
+      // Draw line under headers
+      pdf.line(margin, yPos - 2, pageWidth - margin, yPos - 2);
+      yPos += 3;
+
+      // Table data
+      pdf.setFont('helvetica', 'normal');
+      allProductsToExport.forEach((product: any) => {
+        // Check if we need a new page
+        if (yPos > pageHeight - 30) {
+          pdf.addPage();
+          yPos = margin;
         }
 
-        // Calculate total stock value
-        const totalStockValue = allProducts.reduce((total: number, product: any) => {
-          return total + (product.stock * (product.costPrice || product.price));
-        }, 0);
-        pdf.text(`Total Stock Value: PKR ${totalStockValue.toLocaleString()}`, margin, yPos);
-        yPos += 15;
+        xPos = margin;
+        const stock = product.stock || 0;
+        const price = product.costPrice || product.price || 0;
+        const productValue = stock * price;
+        
+        let rowData: string[];
+        
+        if (exportType === 'summary') {
+          rowData = [
+            (product.name || '').substring(0, 25) + ((product.name || '').length > 25 ? '...' : ''),
+            product.sku || '',
+            (product.category || '').substring(0, 15) + ((product.category || '').length > 15 ? '...' : ''),
+            stock.toString()
+          ];
+        } else if (exportType === 'stock') {
+          rowData = [
+            (product.name || '').substring(0, 22) + ((product.name || '').length > 22 ? '...' : ''),
+            stock.toString(),
+            product.unit || 'pcs',
+            price.toLocaleString(),
+            productValue.toLocaleString()
+          ];
+        } else {
+          rowData = [
+            (product.name || '').substring(0, 20) + ((product.name || '').length > 20 ? '...' : ''),
+            product.sku || '',
+            (product.category || '').substring(0, 12) + ((product.category || '').length > 12 ? '...' : ''),
+            stock.toString(),
+            product.unit || 'pcs',
+            price.toLocaleString(),
+            productValue.toLocaleString()
+          ];
+        }
 
-        // Table headers
-        pdf.setFontSize(8);
-        pdf.setFont('helvetica', 'bold');
-        const headers = ['Product Name', 'SKU', 'Category', 'Stock', 'Unit', 'Price', 'Value'];
-        const colWidths = [50, 30, 25, 20, 15, 25, 25];
-        let xPos = margin;
-
-        headers.forEach((header, index) => {
-          pdf.text(header, xPos, yPos);
+        rowData.forEach((data, index) => {
+          pdf.text(data, xPos, yPos);
           xPos += colWidths[index];
         });
-        yPos += 8;
+        yPos += 6;
+      });
 
-        // Draw line under headers
-        pdf.line(margin, yPos - 2, pageWidth - margin, yPos - 2);
-        yPos += 3;
+      // Footer
+      yPos = pageHeight - 20;
+      pdf.setFontSize(8);
+      pdf.text(`Generated by Inventory Management System`, pageWidth / 2, yPos, { align: 'center' });
 
-        // Table data
-        pdf.setFont('helvetica', 'normal');
-        allProducts.forEach((product: any) => {
-          // Check if we need a new page
-          if (yPos > pageHeight - 30) {
-            pdf.addPage();
-            yPos = margin;
-          }
+      // Save PDF
+      const categoryStr = selectedCategories.includes("all") ? "all" : selectedCategories.join("_");
+      const filename = `stock_export_${categoryStr}_${exportType}_${new Date().toISOString().split('T')[0]}.pdf`;
+      pdf.save(filename);
 
-          xPos = margin;
-          const rowData = [
-            product.name.substring(0, 20) + (product.name.length > 20 ? '...' : ''),
-            product.sku,
-            product.category.substring(0, 12) + (product.category.length > 12 ? '...' : ''),
-            product.stock.toString(),
-            product.unit,
-            product.price.toLocaleString(),
-            (product.stock * (product.costPrice || product.price)).toLocaleString()
-          ];
-
-          rowData.forEach((data, index) => {
-            pdf.text(data, xPos, yPos);
-            xPos += colWidths[index];
-          });
-          yPos += 6;
-        });
-
-        // Footer
-        yPos = pageHeight - 20;
-        pdf.setFontSize(8);
-        pdf.text(`Generated by Inventory Management System`, pageWidth / 2, yPos, { align: 'center' });
-
-        // Save PDF
-        const filename = categoryToExport === "all" 
-          ? `stock_export_${new Date().toISOString().split('T')[0]}.pdf`
-          : `stock_export_${categoryToExport}_${new Date().toISOString().split('T')[0]}.pdf`;
-        pdf.save(filename);
-
-        toast({
-          title: "PDF Export Successful",
-          description: `Exported ${allProducts.length} products to PDF${categoryToExport !== "all" ? ` for category: ${categoryToExport}` : ''}.`,
-        });
-      }
+      toast({
+        title: "PDF Export Successful",
+        description: `Exported ${allProductsToExport.length} products to PDF.`,
+      });
+      
+      console.log('Enhanced PDF export completed successfully');
     } catch (error) {
       console.error('Failed to export stock to PDF:', error);
       toast({
         title: "PDF Export Failed",
-        description: "Failed to export stock data to PDF. Please try again.",
+        description: `Failed to export stock data to PDF. Error: ${error instanceof Error ? error.message : 'Unknown error'}`,
         variant: "destructive"
       });
     } finally {
       setExportLoading(false);
-      setIsPdfExportDialogOpen(false);
+      setIsEnhancedExportOpen(false);
     }
-  };
-
-  const handlePdfExportClick = () => {
-    setIsPdfExportDialogOpen(true);
-  };
-
-  const handleConfirmPdfExport = () => {
-    handleStockExportPDF(selectedExportCategory);
   };
 
   const handlePageChange = (page: number) => {
@@ -507,7 +566,7 @@ const Products = () => {
 
   return (
     <div className="flex-1 p-2 space-y-3 min-h-[calc(100vh-65px)] bg-background no-horizontal-scroll">
-      {/* HEADER AND BUTTONS: now stacked on small screens */}
+      {/* HEADER AND BUTTONS */}
       <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-2">
         <div className="flex items-center gap-4">
           <div>
@@ -515,7 +574,6 @@ const Products = () => {
             <p className="text-muted-foreground">Manage your inventory and product catalog</p>
           </div>
         </div>
-        {/* The button group now stacks on sm, stays in-header on md+ */}
         <div className="flex flex-col sm:flex-row gap-2 w-full md:w-auto">
           <Dialog open={isCategoryDialogOpen} onOpenChange={setIsCategoryDialogOpen}>
             <DialogTrigger asChild>
@@ -548,7 +606,7 @@ const Products = () => {
 
           <Button 
             variant="outline" 
-            onClick={handlePdfExportClick}
+            onClick={() => setIsEnhancedExportOpen(true)}
             disabled={exportLoading}
             className="bg-red-600 hover:bg-red-700 text-white border-red-600 w-full sm:w-auto"
           >
@@ -557,7 +615,7 @@ const Products = () => {
             ) : (
               <FileText className="h-4 w-4 mr-2" />
             )}
-            {exportLoading ? 'Exporting...' : 'PDF Export'}
+            {exportLoading ? 'Exporting...' : 'Enhanced Export'}
           </Button>
 
           <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
@@ -577,42 +635,14 @@ const Products = () => {
         </div>
       </div>
 
-      {/* PDF Export Category Selection Dialog */}
-      <Dialog open={isPdfExportDialogOpen} onOpenChange={setIsPdfExportDialogOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Select Export Category</DialogTitle>
-          </DialogHeader>
-          <div className="space-y-4">
-            <div>
-              <Label htmlFor="exportCategory">Choose which products to export:</Label>
-              <Select value={selectedExportCategory} onValueChange={setSelectedExportCategory}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Select category" />
-                </SelectTrigger>
-                <SelectContent>
-                  {categories.map((category) => (
-                    <SelectItem key={category.value} value={category.value}>
-                      {category.label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="flex gap-2">
-              <Button onClick={handleConfirmPdfExport} className="flex-1" disabled={exportLoading}>
-                {exportLoading ? (
-                  <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
-                ) : (
-                  <FileText className="h-4 w-4 mr-2" />
-                )}
-                {exportLoading ? 'Exporting...' : 'Export PDF'}
-              </Button>
-              <Button variant="outline" onClick={() => setIsPdfExportDialogOpen(false)}>Cancel</Button>
-            </div>
-          </div>
-        </DialogContent>
-      </Dialog>
+      {/* Enhanced Export Modal */}
+      <EnhancedExportModal
+        open={isEnhancedExportOpen}
+        onOpenChange={setIsEnhancedExportOpen}
+        categories={categories}
+        onExport={handleEnhancedExport}
+        exportLoading={exportLoading}
+      />
 
       <div className="grid grid-cols-1 md:grid-cols-4 gap-2">
         <Card className="border-l-4 border-l-blue-500 cursor-pointer hover:shadow-lg transition-shadow">

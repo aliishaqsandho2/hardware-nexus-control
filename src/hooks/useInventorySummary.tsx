@@ -1,6 +1,7 @@
 
 import { useState, useEffect } from 'react';
 import { inventoryApi } from '@/services/api';
+import { stockManagementService } from '@/services/stockManagementService';
 
 interface InventorySummary {
   totalProducts: number;
@@ -24,6 +25,7 @@ export function useInventorySummary() {
       setLoading(true);
       setError(null);
       
+      // Get inventory data
       const response = await inventoryApi.getAll({
         limit: 10000 // Get all products for accurate summary
       });
@@ -33,17 +35,25 @@ export function useInventorySummary() {
         const inventoryArray = Array.isArray(inventoryData) ? inventoryData : [];
         
         if (response.data?.summary) {
+          // Use API summary if available
           setSummary(response.data.summary);
         } else {
-          // Calculate summary from inventory data
+          // Calculate summary from inventory data using consistent logic
           const totalProducts = inventoryArray.length;
-          const totalValue = inventoryArray.reduce((sum, item) => sum + (item.value || 0), 0);
-          const lowStockItems = inventoryArray.filter(item => 
-            (item.currentStock || 0) <= (item.minStock || 0) && (item.currentStock || 0) > 0
-          ).length;
-          const outOfStockItems = inventoryArray.filter(item => 
-            (item.currentStock || 0) === 0
-          ).length;
+          
+          // Use the stock management service for consistent calculations
+          const { totalValue } = await stockManagementService.calculateInventoryValue();
+          
+          const lowStockItems = inventoryArray.filter(item => {
+            const currentStock = item.currentStock || item.stock || 0;
+            const minStock = item.minStock || 0;
+            return currentStock <= minStock && currentStock > 0;
+          }).length;
+          
+          const outOfStockItems = inventoryArray.filter(item => {
+            const currentStock = item.currentStock || item.stock || 0;
+            return currentStock === 0;
+          }).length;
           
           setSummary({
             totalProducts,
@@ -52,6 +62,9 @@ export function useInventorySummary() {
             outOfStockItems
           });
         }
+        
+        // Also refresh stock alerts
+        await stockManagementService.checkStockAlerts();
       } else {
         throw new Error('Failed to fetch inventory summary');
       }

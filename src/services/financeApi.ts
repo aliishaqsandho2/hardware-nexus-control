@@ -1,4 +1,3 @@
-
 const BASE_URL = 'https://usmanhardware.site//wp-json/ims/v1';
 
 // API response types
@@ -242,15 +241,23 @@ const apiRequest = async <T>(
 
 // Finance API endpoints
 export const financeApi = {
-  // Customer balance methods
+  // Customer balance methods - updated to use new service approach
   updateCustomerBalance: (update: CustomerBalanceUpdate) => {
-    console.log('Sending customer balance update:', update);
+    console.log('Sending customer balance update (legacy method):', update);
+    // Convert to new format for consistency
+    const newFormatUpdate = {
+      customerId: update.customerId,
+      orderId: update.orderId,
+      amount: update.amount,
+      type: update.type,
+      orderNumber: update.orderNumber,
+      description: update.description,
+      includesTax: false // Ensure tax-free calculations
+    };
+    
     return apiRequest<ApiResponse<CustomerBalance>>('/customers/update-balance', {
       method: 'POST',
-      body: JSON.stringify({
-        ...update,
-        amount: update.amount
-      }),
+      body: JSON.stringify(newFormatUpdate),
     });
   },
 
@@ -258,8 +265,12 @@ export const financeApi = {
     apiRequest<ApiResponse<CustomerBalance>>(`/customers/${customerId}/balance`),
 
   syncCustomerBalances: () =>
-    apiRequest<ApiResponse<{ updated: number }>>('/customers/sync-balances', {
+    apiRequest<ApiResponse<{ updated: number; errors?: number }>>('/customers/sync-balances', {
       method: 'POST',
+      body: JSON.stringify({
+        includesTax: false,
+        recalculateAll: true
+      }),
     }),
 
   // Finance overview methods
@@ -298,11 +309,13 @@ export const financeApi = {
     notes?: string;
   }) => {
     console.log('Recording payment:', payment);
-    // For mock data, just return success
-    return Promise.resolve({
-      success: true,
-      data: { id: Date.now(), ...payment },
-      message: 'Payment recorded successfully'
+    // Enhanced payment recording with proper balance tracking
+    return apiRequest<ApiResponse<any>>('/customers/record-payment', {
+      method: 'POST',
+      body: JSON.stringify({
+        ...payment,
+        includesTax: false // Ensure tax-free calculations
+      }),
     });
   },
 

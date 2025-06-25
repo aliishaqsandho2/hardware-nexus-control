@@ -1,6 +1,6 @@
 
 import { useToast } from '@/hooks/use-toast';
-import { financeApi } from '@/services/financeApi';
+import { customerBalanceService, BalanceUpdateRequest, CustomerBalanceDetails } from '@/services/customerBalanceService';
 
 export const useCustomerBalance = () => {
   const { toast } = useToast();
@@ -23,48 +23,27 @@ export const useCustomerBalance = () => {
         previousStatus
       });
 
-      // Determine if we need to add or remove debt based on status change
-      let balanceUpdate = null;
+      const result = await customerBalanceService.updateBalanceForOrderStatus(
+        orderId,
+        customerId,
+        orderNumber,
+        orderTotal,
+        newStatus,
+        previousStatus
+      );
 
-      // If changing TO credit status (customer now owes money)
-      if (newStatus === 'credit' && previousStatus !== 'credit') {
-        balanceUpdate = {
-          customerId,
-          orderId,
-          amount: orderTotal,
-          type: 'credit' as const,
-          orderNumber,
-          description: `Order ${orderNumber} changed to credit - customer owes amount`
-        };
-      }
-      // If changing FROM credit status (customer no longer owes money)
-      else if (previousStatus === 'credit' && newStatus !== 'credit') {
-        balanceUpdate = {
-          customerId,
-          orderId,
-          amount: orderTotal,
-          type: 'debit' as const,
-          orderNumber,
-          description: `Order ${orderNumber} status changed from credit - debt cleared`
-        };
-      }
-
-      if (balanceUpdate) {
-        const response = await financeApi.updateCustomerBalance(balanceUpdate);
-        
-        if (response.success) {
-          console.log('Customer balance updated successfully:', response.data);
+      if (result.success) {
+        if (result.data) {
+          console.log('Customer balance updated successfully:', result.data);
           toast({
             title: "Balance Updated",
             description: `Customer balance updated for order ${orderNumber}`,
           });
-          return response.data;
-        } else {
-          throw new Error('Failed to update customer balance');
         }
+        return result.data;
+      } else {
+        throw new Error(result.message || 'Failed to update customer balance');
       }
-
-      return null;
     } catch (error) {
       console.error('Failed to update customer balance:', error);
       toast({
@@ -76,32 +55,89 @@ export const useCustomerBalance = () => {
     }
   };
 
-  const getCustomerBalance = async (customerId: number) => {
+  const updateBalanceForPaymentMethodChange = async (
+    orderId: number,
+    customerId: number,
+    orderNumber: string,
+    orderTotal: number,
+    newPaymentMethod: string,
+    previousPaymentMethod: string
+  ) => {
     try {
-      const response = await financeApi.getCustomerBalance(customerId);
-      if (response.success) {
-        return response.data;
+      console.log('Updating customer balance for payment method change:', {
+        orderId,
+        customerId,
+        orderNumber,
+        orderTotal,
+        newPaymentMethod,
+        previousPaymentMethod
+      });
+
+      const result = await customerBalanceService.updateBalanceForPaymentMethod(
+        orderId,
+        customerId,
+        orderNumber,
+        orderTotal,
+        newPaymentMethod,
+        previousPaymentMethod
+      );
+
+      if (result.success) {
+        if (result.data) {
+          console.log('Customer balance updated for payment method change:', result.data);
+          toast({
+            title: "Balance Updated",
+            description: `Customer balance updated for payment method change in order ${orderNumber}`,
+          });
+        }
+        return result.data;
       } else {
-        throw new Error('Failed to fetch customer balance');
+        throw new Error(result.message || 'Failed to update customer balance');
+      }
+    } catch (error) {
+      console.error('Failed to update customer balance for payment method change:', error);
+      toast({
+        title: "Balance Update Failed",
+        description: `Failed to update customer balance for payment method change in order ${orderNumber}`,
+        variant: "destructive"
+      });
+      throw error;
+    }
+  };
+
+  const getCustomerBalance = async (customerId: number): Promise<CustomerBalanceDetails | null> => {
+    try {
+      const result = await customerBalanceService.getCustomerBalance(customerId);
+      
+      if (result.success && result.data) {
+        return result.data;
+      } else {
+        throw new Error(result.message || 'Failed to fetch customer balance');
       }
     } catch (error) {
       console.error('Failed to fetch customer balance:', error);
-      throw error;
+      toast({
+        title: "Error",
+        description: "Failed to fetch customer balance",
+        variant: "destructive"
+      });
+      return null;
     }
   };
 
   const syncAllCustomerBalances = async () => {
     try {
       console.log('Starting customer balance sync with tax-free calculations...');
-      const response = await financeApi.syncCustomerBalances();
-      if (response.success) {
+      const result = await customerBalanceService.syncAllBalances();
+      
+      if (result.success && result.data) {
         toast({
           title: "Balances Synced",
-          description: `Updated ${response.data.updated} customer balances without tax`,
+          description: `Updated ${result.data.updated} customer balances${result.data.errors > 0 ? ` with ${result.data.errors} errors` : ''}`,
         });
-        return response.data;
+        return result.data;
       } else {
-        throw new Error('Failed to sync customer balances');
+        throw new Error(result.message || 'Failed to sync customer balances');
       }
     } catch (error) {
       console.error('Failed to sync customer balances:', error);
@@ -114,9 +150,68 @@ export const useCustomerBalance = () => {
     }
   };
 
+  const recordManualPayment = async (
+    customerId: number,
+    amount: number,
+    paymentMethod: string,
+    reference?: string,
+    notes?: string
+  ) => {
+    try {
+      const result = await customerBalanceService.recordPayment(
+        customerId,
+        amount,
+        paymentMethod,
+        reference,
+        notes
+      );
+
+      if (result.success) {
+        toast({
+          title: "Payment Recorded",
+          description: `Payment of ${amount.toLocaleString()} recorded successfully`,
+        });
+        return result.data;
+      } else {
+        throw new Error(result.message || 'Failed to record payment');
+      }
+    } catch (error) {
+      console.error('Failed to record payment:', error);
+      toast({
+        title: "Payment Recording Failed",
+        description: "Failed to record payment",
+        variant: "destructive"
+      });
+      throw error;
+    }
+  };
+
+  const getTransactionHistory = async (customerId: number, limit?: number, offset?: number) => {
+    try {
+      const result = await customerBalanceService.getTransactionHistory(customerId, limit, offset);
+      
+      if (result.success) {
+        return result.data || [];
+      } else {
+        throw new Error(result.message || 'Failed to fetch transaction history');
+      }
+    } catch (error) {
+      console.error('Failed to fetch transaction history:', error);
+      toast({
+        title: "Error",
+        description: "Failed to fetch transaction history",
+        variant: "destructive"
+      });
+      return [];
+    }
+  };
+
   return {
     updateBalanceForOrderStatusChange,
+    updateBalanceForPaymentMethodChange,
     getCustomerBalance,
-    syncAllCustomerBalances
+    syncAllCustomerBalances,
+    recordManualPayment,
+    getTransactionHistory
   };
 };

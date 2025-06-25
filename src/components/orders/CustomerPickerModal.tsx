@@ -51,7 +51,7 @@ export const CustomerPickerModal = ({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-4xl h-[85vh] flex flex-col">
+      <DialogContent className="max-w-4xl flex flex-col">
         <DialogHeader>
           <DialogTitle className="text-xl font-bold text-gray-800">
             {isSingleMode ? 'Select Customer' : 'Select Multiple Customers'}

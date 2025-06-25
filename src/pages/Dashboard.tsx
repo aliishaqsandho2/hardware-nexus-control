@@ -180,7 +180,7 @@ export default function Dashboard() {
           <TabsTrigger value="reports" className="text-xs sm:text-sm">Reports</TabsTrigger>
           <TabsTrigger value="notifications" className="text-xs sm:text-sm">Notifications</TabsTrigger>
         </TabsList>
-        
+
         <TabsContent value="overview" className="space-y-6">
           {/* Enhanced Overview Cards with gradient backgrounds */}
           <div className="grid gap-4 grid-cols-2 lg:grid-cols-4">
@@ -191,7 +191,7 @@ export default function Dashboard() {
                     <div className="flex-1">
                       <p className="text-xs font-medium text-white/90 mb-1">Today's Revenue</p>
                       <p className="text-lg sm:text-2xl font-bold text-white mb-1">
-                      Rs. {formatNumber(stats?.financial?.todayRevenue)}
+                        Rs. {formatNumber(stats?.financial?.todayRevenue)}
 
                       </p>
                       <p className="text-xs text-white/80">
@@ -206,7 +206,7 @@ export default function Dashboard() {
                 </div>
               </CardContent>
             </Card>
-            
+
             <Card className="overflow-hidden border-0 shadow-lg">
               <CardContent className="p-0">
                 <div className="bg-gradient-to-br from-green-600 to-green-900 p-4 text-white">
@@ -214,7 +214,7 @@ export default function Dashboard() {
                     <div className="flex-1">
                       <p className="text-xs font-medium text-white/90 mb-1">Today's Orders</p>
                       <p className="text-lg sm:text-2xl font-bold text-white mb-1">
-                      Rs. {formatNumber(stats?.sales?.todaySales)}
+                        Rs. {formatNumber(stats?.sales?.todaySales)}
 
                       </p>
                       <p className="text-xs text-white/80">
@@ -228,7 +228,7 @@ export default function Dashboard() {
                 </div>
               </CardContent>
             </Card>
-            
+
             <Card className="overflow-hidden border-0 shadow-lg">
               <CardContent className="p-0">
                 <div className="bg-gradient-to-br from-red-600 to-red-900 p-4 text-white">
@@ -249,7 +249,7 @@ export default function Dashboard() {
                 </div>
               </CardContent>
             </Card>
-            
+
             <Card className="overflow-hidden border-0 shadow-lg">
               <CardContent className="p-0">
                 <div className="bg-gradient-to-br from-purple-500 to-purple-900 p-4 text-white">
@@ -281,7 +281,7 @@ export default function Dashboard() {
                     <div className="flex-1">
                       <p className="text-xs font-medium text-white/90 mb-1">Month Revenue</p>
                       <p className="text-lg sm:text-2xl font-bold text-white mb-1">
-                      Rs. {formatNumber(stats?.financial?.monthRevenue)}
+                        Rs. {formatNumber(stats?.financial?.monthRevenue)}
 
                       </p>
                       <p className="text-xs text-white/80">
@@ -303,9 +303,9 @@ export default function Dashboard() {
                     <div className="flex-1">
                       <p className="text-xs font-medium text-white/90 mb-1">Monthly Profit</p>
                       <p className="text-lg sm:text-2xl font-bold text-white mb-1">
-                      Rs. {formatNumber(stats?.financial?.netProfit)}
+                        Rs. {formatNumber(stats?.financial?.netProfit)}
 
-                        
+
                       </p>
                       <p className="text-xs text-white/80">
                         Rs. {stats?.financial?.profitMargin?.toFixed(1) || '0'}% profit Margin
@@ -321,19 +321,19 @@ export default function Dashboard() {
 
             <Card className="overflow-hidden border-0 shadow-lg">
               <CardContent className="p-0">
-                <div className="bg-gradient-to-br from-cyan-600 to-cyan-900 p-4 text-white">
+                <div className="bg-gradient-to-br from-indigo-600 to-indigo-900 p-4 text-white">
                   <div className="flex items-center justify-between">
                     <div className="flex-1">
-                      <p className="text-xs font-medium text-white/90 mb-1">Inventory Value</p>
+                      <p className="text-xs font-medium text-white/90 mb-1">Receivables</p>
                       <p className="text-lg sm:text-2xl font-bold text-white mb-1">
-                      Rs. {formatNumber(stats?.inventory?.totalInventoryValue)}
+                        Rs. {formatNumber(stats?.customers?.totalReceivables)}
                       </p>
                       <p className="text-xs text-white/80">
-                        Turnover: {stats?.inventory?.inventoryTurnover?.toFixed(2) || '0'}
+                        Outstanding payments
                       </p>
                     </div>
                     <div className="bg-white/20 p-2 rounded-full">
-                      <Package2 className="h-4 w-4 text-white" />
+                      <CreditCard className="h-4 w-4 text-white" />
                     </div>
                   </div>
                 </div>
@@ -342,19 +342,19 @@ export default function Dashboard() {
 
             <Card className="overflow-hidden border-0 shadow-lg">
               <CardContent className="p-0">
-                <div className="bg-gradient-to-br from-indigo-600 to-indigo-900 p-4 text-white">
+                <div className="bg-gradient-to-br from-cyan-600 to-cyan-900 p-4 text-white">
                   <div className="flex items-center justify-between">
                     <div className="flex-1">
-                      <p className="text-xs font-medium text-white/90 mb-1">Receivables</p>
+                      <p className="text-xs font-medium text-white/90 mb-1">Inventory Value</p>
                       <p className="text-lg sm:text-2xl font-bold text-white mb-1">
-                      Rs. {formatNumber(stats?.customers?.totalReceivables)}
+                        Rs. {formatNumber(stats?.inventory?.totalInventoryValue)}
                       </p>
                       <p className="text-xs text-white/80">
-                        Outstanding payments
+                        Turnover: {stats?.inventory?.inventoryTurnover?.toFixed(2) || '0'}
                       </p>
                     </div>
                     <div className="bg-white/20 p-2 rounded-full">
-                      <CreditCard className="h-4 w-4 text-white" />
+                      <Package2 className="h-4 w-4 text-white" />
                     </div>
                   </div>
                 </div>
@@ -377,25 +377,25 @@ export default function Dashboard() {
                 <ChartContainer config={salesChartConfig} className="h-[300px] w-full">
                   <BarChart data={salesData} margin={{ top: 20, right: 30, left: 20, bottom: 20 }}>
                     <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" className="dark:stroke-slate-700" />
-                    <XAxis 
-                      dataKey="day" 
+                    <XAxis
+                      dataKey="day"
                       tick={{ fontSize: 12, fill: 'currentColor' }}
                       tickLine={false}
                       axisLine={false}
                     />
-                    <YAxis 
+                    <YAxis
                       tick={{ fontSize: 12, fill: 'currentColor' }}
                       tickLine={false}
                       axisLine={false}
                       tickFormatter={(value) => `Rs. ${(value / 1000).toFixed(0)}k`}
                     />
-                    <ChartTooltip 
-                      content={<ChartTooltipContent 
+                    <ChartTooltip
+                      content={<ChartTooltipContent
                         formatter={(value, name) => [
                           `Rs. ${value.toLocaleString()}`,
                           name === 'sales' ? 'Actual Sales' : 'Sales Target'
                         ]}
-                      />} 
+                      />}
                     />
                     <Bar dataKey="sales" fill="#10b981" radius={[4, 4, 0, 0]} name="Actual Sales" />
                     <Bar dataKey="target" fill="#f59e0b" radius={[4, 4, 0, 0]} name="Sales Target" />
@@ -471,9 +471,9 @@ export default function Dashboard() {
                 </ChartContainer>
               </CardContent>
             </Card>
-            
 
-            
+
+
           </div>
 
           {/* New Analytics Section - Weekly Performance Trend */}
@@ -487,16 +487,16 @@ export default function Dashboard() {
                 <CardDescription className="text-sm">Revenue and orders over time</CardDescription>
               </CardHeader>
               <CardContent className="p-4">
-              <ChartContainer config={salesChartConfig} className="h-[300px] w-full">
-  <LineChart data={stats?.performance?.weeklyTrend || []}>
-    <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" className="dark:stroke-slate-700" />
-    <XAxis dataKey="week" tick={{ fontSize: 12, fill: 'currentColor' }} />
-    <YAxis tick={{ fontSize: 12, fill: 'currentColor' }} tickFormatter={(value) => `Rs. ${(value / 1000).toFixed(0)}k`} />
-    <ChartTooltip content={<ChartTooltipContent formatter={(value, name) => [`Rs. ${value.toLocaleString()}`, name === 'revenue' ? 'Revenue' : 'Orders']} />} />
-    <Line dataKey="revenue" stroke="#10b981" strokeWidth={3} dot={{ fill: '#10b981', strokeWidth: 2, r: 4 }} />
-    <Line dataKey="orders" stroke="#3b82f6" strokeWidth={3} dot={{ fill: '#3b82f6', strokeWidth: 2, r: 4 }} />
-  </LineChart>
-</ChartContainer>
+                <ChartContainer config={salesChartConfig} className="h-[300px] w-full">
+                  <LineChart data={stats?.performance?.weeklyTrend || []}>
+                    <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" className="dark:stroke-slate-700" />
+                    <XAxis dataKey="week" tick={{ fontSize: 12, fill: 'currentColor' }} />
+                    <YAxis tick={{ fontSize: 12, fill: 'currentColor' }} tickFormatter={(value) => `Rs. ${(value / 1000).toFixed(0)}k`} />
+                    <ChartTooltip content={<ChartTooltipContent formatter={(value, name) => [`Rs. ${value.toLocaleString()}`, name === 'revenue' ? 'Revenue' : 'Orders']} />} />
+                    <Line dataKey="revenue" stroke="#10b981" strokeWidth={3} dot={{ fill: '#10b981', strokeWidth: 2, r: 4 }} />
+                    <Line dataKey="orders" stroke="#3b82f6" strokeWidth={3} dot={{ fill: '#3b82f6', strokeWidth: 2, r: 4 }} />
+                  </LineChart>
+                </ChartContainer>
               </CardContent>
             </Card>
 
@@ -552,8 +552,8 @@ export default function Dashboard() {
                     </div>
                   </div>
                 )) || (
-                  <p className="text-sm text-muted-foreground">No recent sales</p>
-                )}
+                    <p className="text-sm text-muted-foreground">No recent sales</p>
+                  )}
               </CardContent>
             </Card>
 
@@ -577,8 +577,8 @@ export default function Dashboard() {
                     </div>
                   </div>
                 )) || (
-                  <p className="text-sm text-muted-foreground">No recent payments</p>
-                )}
+                    <p className="text-sm text-muted-foreground">No recent payments</p>
+                  )}
               </CardContent>
             </Card>
 
@@ -624,7 +624,7 @@ export default function Dashboard() {
             </Card>
           </div>
         </TabsContent>
-        
+
         <TabsContent value="analytics" className="space-y-6">
           {/* Enhanced Analytics Section */}
           <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
@@ -647,7 +647,7 @@ export default function Dashboard() {
                 </div>
               </CardContent>
             </Card>
-            
+
             <Card className="border-l-4 border-l-green-500 bg-gradient-to-br from-green-50 to-green-100 dark:from-green-950/20 dark:to-green-900/20 shadow-lg">
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                 <CardTitle className="text-sm font-medium">Inventory Turnover</CardTitle>
@@ -667,7 +667,7 @@ export default function Dashboard() {
                 </div>
               </CardContent>
             </Card>
-            
+
             <Card className="border-l-4 border-l-orange-500 bg-gradient-to-br from-orange-50 to-orange-100 dark:from-orange-950/20 dark:to-orange-900/20 shadow-lg">
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                 <CardTitle className="text-sm font-medium">Receivables</CardTitle>
@@ -687,7 +687,7 @@ export default function Dashboard() {
                 </div>
               </CardContent>
             </Card>
-            
+
             <Card className="border-l-4 border-l-purple-500 bg-gradient-to-br from-purple-50 to-purple-100 dark:from-purple-950/20 dark:to-purple-900/20 shadow-lg">
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                 <CardTitle className="text-sm font-medium">Daily Avg Revenue</CardTitle>
@@ -695,7 +695,7 @@ export default function Dashboard() {
               </CardHeader>
               <CardContent>
                 <div className="text-2xl font-bold text-purple-600 dark:text-purple-400">
-                Rs. {formatNumber(stats?.performance?.dailyAvgRevenue)}
+                  Rs. {formatNumber(stats?.performance?.dailyAvgRevenue)}
                 </div>
                 <p className="text-xs text-muted-foreground">
                   Average per day
@@ -761,7 +761,7 @@ export default function Dashboard() {
                       <p className="text-sm text-muted-foreground">New This Month</p>
                     </div>
                   </div>
-                  
+
                   {/* Customer Types */}
                   <div className="space-y-2">
                     <p className="font-medium">Customer Types</p>
@@ -830,7 +830,7 @@ export default function Dashboard() {
             </Card>
           </div>
         </TabsContent>
-        
+
         <TabsContent value="reports" className="space-y-6">
           {/* Enhanced Reports Section */}
           <div className="grid gap-6">
@@ -943,7 +943,7 @@ export default function Dashboard() {
                     </div>
                     <div className="text-center p-4 bg-gradient-to-r from-green-50 to-green-100 dark:from-green-950/20 dark:to-green-900/20 rounded-lg">
                       <p className="text-2xl font-bold text-green-600 dark:text-green-400">
-                      Rs. {formatNumber(inventoryReport.data?.inventoryReport?.totalValue)}
+                        Rs. {formatNumber(inventoryReport.data?.inventoryReport?.totalValue)}
                       </p>
                       <p className="text-sm text-muted-foreground">Total Value</p>
                     </div>
@@ -1049,7 +1049,7 @@ export default function Dashboard() {
             )}
           </div>
         </TabsContent>
-        
+
         <TabsContent value="notifications" className="space-y-4">
           <Card>
             <CardHeader>
@@ -1067,8 +1067,8 @@ export default function Dashboard() {
                     </div>
                   </div>
                 )) || (
-                  <p className="text-sm text-muted-foreground">No notifications at this time</p>
-                )}
+                    <p className="text-sm text-muted-foreground">No notifications at this time</p>
+                  )}
               </div>
             </CardContent>
           </Card>

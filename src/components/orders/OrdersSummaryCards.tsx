@@ -11,7 +11,20 @@ interface OrdersSummaryCardsProps {
     todayMargin?: number;
   };
 }
+function formatNumber(value) {
+  const num = Number(value);
+  if (isNaN(num)) return '0';
 
+  if (num >= 10000000) {
+    return (num / 10000000).toFixed(2) + ' Cr';
+  } else if (num >= 100000) {
+    return (num / 100000).toFixed(2) + ' Lac';
+  } else if (num >= 1000) {
+    return (num / 1000).toFixed(2) + ' K';
+  } else {
+    return num.toFixed(0);
+  }
+}
 export const OrdersSummaryCards = ({ summary }: OrdersSummaryCardsProps) => {
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-6">
@@ -37,7 +50,7 @@ export const OrdersSummaryCards = ({ summary }: OrdersSummaryCardsProps) => {
             </div>
             <div>
               <p className="text-sm text-slate-600">Total Sales</p>
-              <p className="text-2xl font-bold text-green-600">Rs. {summary.totalSales.toLocaleString()}</p>
+              <p className="text-2xl font-bold text-green-600">Rs. {formatNumber(summary.totalSales)}</p>
             </div>
           </div>
         </CardContent>
@@ -51,7 +64,7 @@ export const OrdersSummaryCards = ({ summary }: OrdersSummaryCardsProps) => {
             </div>
             <div>
               <p className="text-sm text-slate-600">Avg Order Value</p>
-              <p className="text-2xl font-bold text-purple-600">Rs. {summary.avgOrderValue.toLocaleString()}</p>
+              <p className="text-2xl font-bold text-purple-600">Rs. {formatNumber(summary.avgOrderValue)}</p>
             </div>
           </div>
         </CardContent>

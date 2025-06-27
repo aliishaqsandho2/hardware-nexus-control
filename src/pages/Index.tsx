@@ -97,7 +97,7 @@ const Index = () => {
   const { data: dashboardData, isLoading, error } = useQuery({
     queryKey: ['dashboard-stats'],
     queryFn: async () => {
-      const response = await fetch('https://usmanhardware.site//wp-json/ims/v1/dashboard/enhanced-stats');
+      const response = await fetch('https://bagelegance.site//wp-json/ims/v1/dashboard/enhanced-stats');
       if (!response.ok) throw new Error('Failed to fetch stats');
       return response.json();
     },

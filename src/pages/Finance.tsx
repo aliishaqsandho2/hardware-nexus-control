@@ -130,7 +130,7 @@ const Finance = () => {
 
   const handleRecordPayment = async (paymentData: any) => {
     try {
-      const res = await fetch("https://usmanhardware.site//wp-json/ims/v1/finance/payments", {
+      const res = await fetch("https://bagelegance.site//wp-json/ims/v1/finance/payments", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({

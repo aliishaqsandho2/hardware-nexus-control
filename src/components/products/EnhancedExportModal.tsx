@@ -7,13 +7,7 @@ import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Progress } from "@/components/ui/progress";
 import { Badge } from "@/components/ui/badge";
-import { 
-  Select, 
-  SelectContent, 
-  SelectItem, 
-  SelectTrigger, 
-  SelectValue 
-} from "@/components/ui/select";
+
 import { 
   FileText, 
   RefreshCw, 
@@ -87,7 +81,7 @@ export const EnhancedExportModal = ({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[600px] max-h-[90vh] overflow-hidden">
+      <DialogContent className="sm:max-w-[600px] max-h-[90vh] overflow-y-auto">
         <DialogHeader className="pb-4">
           <DialogTitle className="flex items-center gap-3 text-xl">
             <div className="p-2 bg-blue-100 dark:bg-blue-900 rounded-lg">
@@ -101,39 +95,7 @@ export const EnhancedExportModal = ({
         </DialogHeader>
         
         <div className="space-y-6 py-2">
-          {/* Export Type Selection */}
-          <div className="space-y-3">
-            <Label className="text-base font-medium flex items-center gap-2">
-              <FileText className="h-4 w-4" />
-              Report Type
-            </Label>
-            <Select value={exportType} onValueChange={setExportType}>
-              <SelectTrigger className="w-full h-12 text-sm">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="detailed">
-                  <div className="flex flex-col items-start">
-                    <span className="font-medium">Detailed Report</span>
-                    <span className="text-xs text-muted-foreground">All product fields and information</span>
-                  </div>
-                </SelectItem>
-                <SelectItem value="summary">
-                  <div className="flex flex-col items-start">
-                    <span className="font-medium">Summary Report</span>
-                    <span className="text-xs text-muted-foreground">Basic product information only</span>
-                  </div>
-                </SelectItem>
-                <SelectItem value="stock">
-                  <div className="flex flex-col items-start">
-                    <span className="font-medium">Stock Report</span>
-                    <span className="text-xs text-muted-foreground">Stock levels and values</span>
-                  </div>
-                </SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-
+          
           {/* Category Selection */}
           <div className="space-y-4">
             <Label className="text-base font-medium flex items-center gap-2">
@@ -280,37 +242,8 @@ export const EnhancedExportModal = ({
             </div>
           )}
 
-          {/* Export Info */}
-          <div className="bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-950 dark:to-indigo-950 p-4 rounded-lg border border-blue-200 dark:border-blue-800">
-            <div className="flex items-start gap-3">
-              <div className="p-1 bg-blue-100 dark:bg-blue-900 rounded">
-                <FileText className="h-4 w-4 text-blue-600" />
-              </div>
-              <div className="flex-1">
-                <h4 className="font-medium text-blue-900 dark:text-blue-100 mb-2">
-                  What's Included in Your Report
-                </h4>
-                <ul className="text-sm text-blue-800 dark:text-blue-200 space-y-1">
-                  <li className="flex items-center gap-2">
-                    <Circle className="h-1.5 w-1.5 fill-current" />
-                    Product names, SKUs, and categories
-                  </li>
-                  <li className="flex items-center gap-2">
-                    <Circle className="h-1.5 w-1.5 fill-current" />
-                    Current stock levels and pricing
-                  </li>
-                  <li className="flex items-center gap-2">
-                    <Circle className="h-1.5 w-1.5 fill-current" />
-                    Total inventory value calculations
-                  </li>
-                  <li className="flex items-center gap-2">
-                    <Circle className="h-1.5 w-1.5 fill-current" />
-                    Export timestamp and summary
-                  </li>
-                </ul>
-              </div>
-            </div>
-          </div>
+       
+         
         </div>
 
         {/* Action Buttons */}

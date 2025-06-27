@@ -112,7 +112,7 @@ export const CartSidebar: React.FC<CartSidebarProps> = ({
             <ChevronLeft className="h-4 w-4" />
           </Button>
         </div>
-        
+
         <div className="flex-1 flex flex-col items-center justify-center p-2">
           <div className="relative mb-4">
             <ShoppingCart className="h-6 w-6 text-muted-foreground" />
@@ -122,7 +122,7 @@ export const CartSidebar: React.FC<CartSidebarProps> = ({
               </Badge>
             )}
           </div>
-          
+
           {cart.length > 0 && (
             <div className="text-center">
               <div className="text-xs font-medium text-foreground mb-1">
@@ -171,7 +171,7 @@ export const CartSidebar: React.FC<CartSidebarProps> = ({
 
         {/* Customer, Payment, Order Status */}
         <div className="p-1 border-b border-border bg-muted/50 flex-shrink-0">
-         
+
           {selectedCustomer ? (
             <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-700 p-2 rounded-lg">
               <div className="flex items-center justify-between">
@@ -191,7 +191,7 @@ export const CartSidebar: React.FC<CartSidebarProps> = ({
             </div>
           ) : (
             <div className="bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-700 p-2 rounded-lg">
-              
+
               <div className="flex gap-1">
                 <Button
                   variant="outline"
@@ -215,7 +215,7 @@ export const CartSidebar: React.FC<CartSidebarProps> = ({
         </div>
         <div className="p-1 border-b border-border bg-muted/50 flex-shrink-0">
           <div className="space-y-2">
-           
+
             <Select value={paymentMethod} onValueChange={onSetPaymentMethod}>
               <SelectTrigger className="h-8 text-xs bg-background border-input">
                 <SelectValue />
@@ -231,7 +231,7 @@ export const CartSidebar: React.FC<CartSidebarProps> = ({
         </div>
         <div className="p-1 border-b border-border bg-muted/50 flex-shrink-0">
           <div className="space-y-2">
-            
+
             <Select value={orderStatus} onValueChange={onSetOrderStatus}>
               <SelectTrigger className="h-8 text-xs bg-background border-input">
                 <SelectValue />
@@ -254,114 +254,114 @@ export const CartSidebar: React.FC<CartSidebarProps> = ({
             </h3>
           </div>
           <div className="space-y-3 px-3 pt-5 pb-20 h-full overflow-y-auto">
-  {cart.length === 0 ? (
-    <div className="flex-1 flex items-center justify-center min-h-[200px]">
-      <div className="text-center py-8">
-        <ShoppingCart className="h-8 w-8 text-muted-foreground mx-auto mb-2" />
-        <p className="text-muted-foreground text-sm">Cart is empty</p>
-      </div>
-    </div>
-  ) : (
-    cart.map((item) => (
-      <div key={item.productId} className="bg-muted/50 border border-border p-2 rounded-lg mb-2">
-        <div className="flex items-start justify-between mb-2">
-          <div className="flex-1">
-            <p className="font-medium text-xs text-card-foreground">{item.name}</p>
-            <div className="flex items-center gap-2">
-              <p className="text-xs text-muted-foreground">
-                Original: PKR {item.price.toLocaleString()} / {item.unit}
-              </p>
-              {item.adjustedPrice && item.adjustedPrice !== item.price && (
-                <Badge variant="secondary" className="text-xs">Negotiated</Badge>
-              )}
-            </div>
-          </div>
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={() => onRemoveFromCart(item.productId)}
-            className="h-5 w-5 p-0 text-red-500 hover:text-red-700"
-          >
-            <X className="h-3 w-3" />
-          </Button>
-        </div>
-
-        {/* Price editing section */}
-        <div className="mb-2">
-          {priceEditingItem === item.productId ? (
-            <div className="flex items-center gap-1">
-              <Input
-                type="number"
-                value={tempPrice}
-                onChange={(e) => setTempPrice(e.target.value)}
-                className="h-6 text-xs flex-1"
-                placeholder="New price"
-              />
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => handlePriceSave(item.productId)}
-                className="h-6 w-6 p-0 bg-green-600 text-white"
-              >
-                ✓
-              </Button>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={handlePriceCancel}
-                className="h-6 w-6 p-0 bg-red-600 text-white"
-              >
-                ✕
-              </Button>
-            </div>
-          ) : (
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-1">
-                <span className="text-xs font-medium">
-                  PKR {(item.adjustedPrice || item.price).toLocaleString()} / {item.unit}
-                </span>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => handlePriceEdit(item)}
-                  className="h-4 w-4 p-0 text-blue-600 hover:text-blue-800"
-                  title="Negotiate price"
-                >
-                  <Edit2 className="h-2.5 w-2.5" />
-                </Button>
+            {cart.length === 0 ? (
+              <div className="flex-1 flex items-center justify-center min-h-[200px]">
+                <div className="text-center py-8">
+                  <ShoppingCart className="h-8 w-8 text-muted-foreground mx-auto mb-2" />
+                  <p className="text-muted-foreground text-sm">Cart is empty</p>
+                </div>
               </div>
-            </div>
-          )}
-        </div>
+            ) : (
+              cart.map((item) => (
+                <div key={item.productId} className="bg-muted/50 border border-border p-2 rounded-lg mb-2">
+                  <div className="flex items-start justify-between mb-2">
+                    <div className="flex-1">
+                      <p className="font-medium text-xs text-card-foreground">{item.name}</p>
+                      <div className="flex items-center gap-2">
+                        <p className="text-xs text-muted-foreground">
+                          Original: PKR {item.price.toLocaleString()} / {item.unit}
+                        </p>
+                        {item.adjustedPrice && item.adjustedPrice !== item.price && (
+                          <Badge variant="secondary" className="text-xs">Negotiated</Badge>
+                        )}
+                      </div>
+                    </div>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => onRemoveFromCart(item.productId)}
+                      className="h-5 w-5 p-0 text-red-500 hover:text-red-700"
+                    >
+                      <X className="h-3 w-3" />
+                    </Button>
+                  </div>
 
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-1">
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => onUpdateCartQuantity(item.productId, item.quantity - 0.25)}
-              className="h-6 w-6 p-0 bg-background"
-            >
-              <Minus className="h-3 w-3" />
-            </Button>
-            <span className="w-14 text-center text-xs font-medium text-card-foreground">{item.quantity} {item.unit}</span>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => onUpdateCartQuantity(item.productId, item.quantity + 0.25)}
-              className="h-6 w-6 p-0 bg-background"
-            >
-              <Plus className="h-3 w-3" />
-            </Button>
+                  {/* Price editing section */}
+                  <div className="mb-2">
+                    {priceEditingItem === item.productId ? (
+                      <div className="flex items-center gap-1">
+                        <Input
+                          type="number"
+                          value={tempPrice}
+                          onChange={(e) => setTempPrice(e.target.value)}
+                          className="h-6 text-xs flex-1"
+                          placeholder="New price"
+                        />
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => handlePriceSave(item.productId)}
+                          className="h-6 w-6 p-0 bg-green-600 text-white"
+                        >
+                          ✓
+                        </Button>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={handlePriceCancel}
+                          className="h-6 w-6 p-0 bg-red-600 text-white"
+                        >
+                          ✕
+                        </Button>
+                      </div>
+                    ) : (
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-1">
+                          <span className="text-xs font-medium">
+                            PKR {(item.adjustedPrice || item.price).toLocaleString()} / {item.unit}
+                          </span>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => handlePriceEdit(item)}
+                            className="h-4 w-4 p-0 text-blue-600 hover:text-blue-800"
+                            title="Negotiate price"
+                          >
+                            <Edit2 className="h-2.5 w-2.5" />
+                          </Button>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-1">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => onUpdateCartQuantity(item.productId, item.quantity - 0.25)}
+                        className="h-6 w-6 p-0 bg-background"
+                      >
+                        <Minus className="h-3 w-3" />
+                      </Button>
+                      <span className="w-14 text-center text-xs font-medium text-card-foreground">{item.quantity} {item.unit}</span>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => onUpdateCartQuantity(item.productId, item.quantity + 0.25)}
+                        className="h-6 w-6 p-0 bg-background"
+                      >
+                        <Plus className="h-3 w-3" />
+                      </Button>
+                    </div>
+                    <p className="font-semibold text-blue-600 text-xs">
+                      PKR {((item.adjustedPrice || item.price) * item.quantity).toLocaleString()}
+                    </p>
+                  </div>
+                </div>
+              ))
+            )}
           </div>
-          <p className="font-semibold text-blue-600 text-xs">
-            PKR {((item.adjustedPrice || item.price) * item.quantity).toLocaleString()}
-          </p>
-        </div>
-      </div>
-    ))
-  )}
-</div>
         </div>
       </div>
 

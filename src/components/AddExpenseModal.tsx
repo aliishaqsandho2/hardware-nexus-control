@@ -26,10 +26,7 @@ export default function AddExpenseModal({ open, onOpenChange, onExpenseAdded }: 
   const [formData, setFormData] = useState({
     category: "",
     description: "",
-    amount: "",
-    reference: "",
-    paymentMethod: "",
-    receipt: ""
+    amount: ""
   });
 
   const categories = [
@@ -43,17 +40,10 @@ export default function AddExpenseModal({ open, onOpenChange, onExpenseAdded }: 
     "Other"
   ];
 
-  const paymentMethods = [
-    { value: "cash", label: "Cash" },
-    { value: "bank_transfer", label: "Bank Transfer" },
-    { value: "cheque", label: "Cheque" },
-    { value: "credit_card", label: "Credit Card" }
-  ];
-
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!formData.category || !formData.description || !formData.amount || !selectedDate || !formData.paymentMethod) {
+    if (!formData.category || !formData.description || !formData.amount || !selectedDate) {
       toast({
         title: "Error",
         description: "Please fill in all required fields",
@@ -78,9 +68,9 @@ export default function AddExpenseModal({ open, onOpenChange, onExpenseAdded }: 
           description: formData.description,
           amount: parseFloat(formData.amount),
           date: formattedDate,
-          reference: formData.reference || `EXP-${Date.now()}`,
-          payment_method: formData.paymentMethod,
-          receipt_url: formData.receipt
+          reference: `EXP-${Date.now()}`,
+          payment_method: "cash",
+          receipt_url: ""
         })
       });
 
@@ -97,10 +87,7 @@ export default function AddExpenseModal({ open, onOpenChange, onExpenseAdded }: 
         setFormData({
           category: "",
           description: "",
-          amount: "",
-          reference: "",
-          paymentMethod: "",
-          receipt: ""
+          amount: ""
         });
         setSelectedDate(undefined);
         
@@ -171,69 +158,31 @@ export default function AddExpenseModal({ open, onOpenChange, onExpenseAdded }: 
             />
           </div>
 
-          <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label>Date *</Label>
-              <Popover>
-                <PopoverTrigger asChild>
-                  <Button
-                    variant="outline"
-                    className={cn(
-                      "w-full justify-start text-left font-normal",
-                      !selectedDate && "text-muted-foreground"
-                    )}
-                  >
-                    <CalendarIcon className="mr-2 h-4 w-4" />
-                    {selectedDate ? format(selectedDate, "dd/MM/yyyy") : "Pick a date"}
-                  </Button>
-                </PopoverTrigger>
-                <PopoverContent className="w-auto p-0" align="start">
-                  <Calendar
-                    mode="single"
-                    selected={selectedDate}
-                    onSelect={setSelectedDate}
-                    initialFocus
-                    className="pointer-events-auto"
-                  />
-                </PopoverContent>
-              </Popover>
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="paymentMethod">Payment Method *</Label>
-              <Select value={formData.paymentMethod} onValueChange={(value) => setFormData(prev => ({ ...prev, paymentMethod: value }))}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Select method" />
-                </SelectTrigger>
-                <SelectContent>
-                  {paymentMethods.map((method) => (
-                    <SelectItem key={method.value} value={method.value}>
-                      {method.label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-          </div>
-
           <div className="space-y-2">
-            <Label htmlFor="reference">Reference</Label>
-            <Input
-              id="reference"
-              placeholder="Reference number (optional)"
-              value={formData.reference}
-              onChange={(e) => setFormData(prev => ({ ...prev, reference: e.target.value }))}
-            />
-          </div>
-
-          <div className="space-y-2">
-            <Label htmlFor="receipt">Receipt URL</Label>
-            <Input
-              id="receipt"
-              placeholder="Receipt URL (optional)"
-              value={formData.receipt}
-              onChange={(e) => setFormData(prev => ({ ...prev, receipt: e.target.value }))}
-            />
+            <Label>Date *</Label>
+            <Popover>
+              <PopoverTrigger asChild>
+                <Button
+                  variant="outline"
+                  className={cn(
+                    "w-full justify-start text-left font-normal",
+                    !selectedDate && "text-muted-foreground"
+                  )}
+                >
+                  <CalendarIcon className="mr-2 h-4 w-4" />
+                  {selectedDate ? format(selectedDate, "dd/MM/yyyy") : "Pick a date"}
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-auto p-0" align="start">
+                <Calendar
+                  mode="single"
+                  selected={selectedDate}
+                  onSelect={setSelectedDate}
+                  initialFocus
+                  className="pointer-events-auto"
+                />
+              </PopoverContent>
+            </Popover>
           </div>
 
           <DialogFooter>

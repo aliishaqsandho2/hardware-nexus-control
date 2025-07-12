@@ -123,7 +123,7 @@ class StockManagementService {
   async validateStockAvailability(productId: number, requestedQuantity: number): Promise<StockValidationResult> {
     try {
       // Get product details from API
-      const response = await fetch(`https://bagelegance.site/wp-json/ims/v1/products/${productId}`, {
+      const response = await fetch(`https://usmanhardware.site/wp-json/ims/v1/products/${productId}`, {
         method: 'GET',
         headers: { 'Content-Type': 'application/json' }
       });
@@ -187,7 +187,7 @@ class StockManagementService {
       }
 
       // Use inventory restock API with negative quantity to deduct stock
-      const response = await fetch('https://bagelegance.site/wp-json/ims/v1/inventory/restock', {
+      const response = await fetch('https://usmanhardware.site/wp-json/ims/v1/inventory/restock', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -253,7 +253,7 @@ class StockManagementService {
   ): Promise<{ success: boolean; message: string; newStock?: number }> {
     try {
       // Use inventory restock API
-      const response = await fetch('https://bagelegance.site/wp-json/ims/v1/inventory/restock', {
+      const response = await fetch('https://usmanhardware.site/wp-json/ims/v1/inventory/restock', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -369,7 +369,7 @@ class StockManagementService {
   // Get current stock level
   async getCurrentStock(productId: number): Promise<number> {
     try {
-      const response = await fetch(`https://bagelegance.site/wp-json/ims/v1/products/${productId}`, {
+      const response = await fetch(`https://usmanhardware.site/wp-json/ims/v1/products/${productId}`, {
         method: 'GET',
         headers: { 'Content-Type': 'application/json' }
       });

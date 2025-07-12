@@ -40,7 +40,7 @@ interface ExpenseSummary {
   paymentMethods: Array<{ method: string; amount: number; count: number }>;
 }
 
-const BASE_URL = 'https://bagelegance.site//wp-json/ims/v1';
+const BASE_URL = 'https://usmanhardware.site/wp-json/ims/v1';
 
 export default function ExpenseTracking() {
   const { toast } = useToast();

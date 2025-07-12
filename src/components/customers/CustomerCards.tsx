@@ -55,7 +55,7 @@ export const CustomerCards = ({ customers, loading, onSelectCustomer, onEditCust
       console.log('Fetching purchase data for customer:', customer.id);
       
       // Use the new API endpoint you created
-      const ordersResponse = await fetch(`https://bagelegance.site/wp-json/ims/v1/customers/${customer.id}/orders?includeItems=true`);
+      const ordersResponse = await fetch(`https://usmanhardware.site/wp-json/ims/v1/customers/${customer.id}/orders?includeItems=true`);
       
       if (!ordersResponse.ok) {
         throw new Error('Failed to fetch customer orders');

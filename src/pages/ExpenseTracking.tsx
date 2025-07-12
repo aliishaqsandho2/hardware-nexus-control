@@ -20,6 +20,7 @@ import {
 } from "@/components/ui/table";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
 import { useToast } from "@/hooks/use-toast";
+import { financeApi } from "@/services/financeApi";
 
 interface Expense {
   id: number;
@@ -137,13 +138,7 @@ export default function ExpenseTracking() {
 
   const handleCreateExpense = async (expenseData: any) => {
     try {
-      const response = await fetch(`${BASE_URL}/finance/expenses`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(expenseData)
-      });
-      
-      const data = await response.json();
+      const data = await financeApi.createExpense(expenseData);
       if (data.success) {
         toast({
           title: "Success",

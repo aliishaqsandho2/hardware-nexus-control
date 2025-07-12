@@ -578,10 +578,7 @@ const ExpenseFormModal = ({
     category: '',
     description: '',
     amount: '',
-    date: '',
-    payment_method: '',
-    reference: '',
-    receipt_url: ''
+    date: ''
   });
 
   useEffect(() => {
@@ -590,20 +587,14 @@ const ExpenseFormModal = ({
         category: expense.category,
         description: expense.description || '',
         amount: expense.amount.toString(),
-        date: expense.date,
-        payment_method: expense.payment_method,
-        reference: expense.reference || '',
-        receipt_url: expense.receipt_url || ''
+        date: expense.date
       });
     } else {
       setFormData({
         category: '',
         description: '',
         amount: '',
-        date: new Date().toLocaleDateString('en-GB'),
-        payment_method: '',
-        reference: '',
-        receipt_url: ''
+        date: new Date().toLocaleDateString('en-GB')
       });
     }
   }, [expense, open]);
@@ -612,7 +603,10 @@ const ExpenseFormModal = ({
     e.preventDefault();
     onSubmit({
       ...formData,
-      amount: parseFloat(formData.amount)
+      amount: parseFloat(formData.amount),
+      payment_method: "cash",
+      reference: `EXP-${Date.now()}`,
+      receipt_url: ""
     });
   };
 
@@ -667,70 +661,26 @@ const ExpenseFormModal = ({
             />
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
-              <Label htmlFor="date" className="text-sm font-medium text-slate-700">Date *</Label>
-              <Input
-                id="date"
-                type="date"
-                value={formData.date ? formData.date.split('/').reverse().join('-') : ''}
-                onChange={(e) => {
-                  const date = new Date(e.target.value);
-                  setFormData({ ...formData, date: date.toLocaleDateString('en-GB') });
-                }}
-                required
-                className="mt-1 border-slate-200 focus:border-blue-500 focus:ring-blue-500"
-              />
-            </div>
-            <div>
-              <Label htmlFor="payment_method" className="text-sm font-medium text-slate-700">Payment Method *</Label>
-              <Select
-                value={formData.payment_method}
-                onValueChange={(value) => setFormData({ ...formData, payment_method: value })}
-              >
-                <SelectTrigger className="mt-1 border-slate-200 focus:border-blue-500 focus:ring-blue-500">
-                  <SelectValue placeholder="Select payment method" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="cash">Cash</SelectItem>
-                  <SelectItem value="bank_transfer">Bank Transfer</SelectItem>
-                  <SelectItem value="cheque">Cheque</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
-              <Label htmlFor="reference" className="text-sm font-medium text-slate-700">Reference</Label>
-              <Input
-                id="reference"
-                value={formData.reference}
-                onChange={(e) => setFormData({ ...formData, reference: e.target.value })}
-                className="mt-1 border-slate-200 focus:border-blue-500 focus:ring-blue-500"
-                placeholder="Reference number or code"
-                maxLength={50}
-              />
-            </div>
-            <div>
-              <Label htmlFor="receipt_url" className="text-sm font-medium text-slate-700">Receipt URL</Label>
-              <Input
-                id="receipt_url"
-                type="url"
-                value={formData.receipt_url}
-                onChange={(e) => setFormData({ ...formData, receipt_url: e.target.value })}
-                className="mt-1 border-slate-200 focus:border-blue-500 focus:ring-blue-500"
-                placeholder="https://..."
-                maxLength={255}
-              />
-            </div>
+          <div>
+            <Label htmlFor="date" className="text-sm font-medium text-slate-700">Date *</Label>
+            <Input
+              id="date"
+              type="date"
+              value={formData.date ? formData.date.split('/').reverse().join('-') : ''}
+              onChange={(e) => {
+                const date = new Date(e.target.value);
+                setFormData({ ...formData, date: date.toLocaleDateString('en-GB') });
+              }}
+              required
+              className="mt-1 border-slate-200 focus:border-blue-500 focus:ring-blue-500"
+            />
           </div>
 
           <div className="flex gap-3 pt-4">
             <Button
               type="submit"
               className="flex-1 bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800"
-              disabled={!formData.category || !formData.amount || !formData.date || !formData.payment_method}
+              disabled={!formData.category || !formData.amount || !formData.date}
             >
               {expense ? 'Update Expense' : 'Add Expense'}
             </Button>

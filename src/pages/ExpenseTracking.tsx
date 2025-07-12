@@ -454,19 +454,16 @@ export default function ExpenseTracking() {
             <Table>
               <TableHeader>
                 <TableRow className="border-slate-200">
-                  <TableHead className="text-slate-500 font-semibold">Reference</TableHead>
                   <TableHead className="text-slate-500 font-semibold">Category</TableHead>
                   <TableHead className="text-slate-500 font-semibold">Description</TableHead>
                   <TableHead className="text-slate-500 font-semibold">Amount</TableHead>
                   <TableHead className="text-slate-500 font-semibold">Date</TableHead>
-                  <TableHead className="text-slate-500 font-semibold">Payment Method</TableHead>
                   <TableHead className="text-slate-500 font-semibold">Actions</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {filteredExpenses.map((expense) => (
                   <TableRow key={expense.id} className="border-slate-100 hover:bg-slate-50">
-                    <TableCell className="font-medium text-slate-500">{expense.reference}</TableCell>
                     <TableCell>
                       <Badge variant="outline" className="border-slate-200">
                         {expense.category}
@@ -475,9 +472,6 @@ export default function ExpenseTracking() {
                     <TableCell className="text-slate-700">{expense.description}</TableCell>
                     <TableCell className="font-semibold text-red-600">Rs. {expense.amount.toLocaleString()}</TableCell>
                     <TableCell className="text-slate-600">{expense.date}</TableCell>
-                    <TableCell>
-                      {getPaymentMethodBadge(expense.payment_method)}
-                    </TableCell>
                     <TableCell>
                       <div className="flex gap-2">
                         <Button

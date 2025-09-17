@@ -41,7 +41,7 @@ interface ExpenseSummary {
   paymentMethods: Array<{ method: string; amount: number; count: number }>;
 }
 
-const BASE_URL = 'https://usmanhardware.site/wp-json/ims/v1';
+import { apiConfig } from '@/utils/apiConfig';
 
 export default function ExpenseTracking() {
   const { toast } = useToast();
@@ -75,7 +75,7 @@ export default function ExpenseTracking() {
         params.append('category', selectedCategory);
       }
 
-      const response = await fetch(`${BASE_URL}/finance/expenses?${params}`);
+      const response = await fetch(`${apiConfig.getBaseUrl()}/finance/expenses?${params}`);
       const data = await response.json();
       
       if (data.success) {
@@ -161,7 +161,7 @@ export default function ExpenseTracking() {
 
   const handleUpdateExpense = async (id: number, expenseData: any) => {
     try {
-      const response = await fetch(`${BASE_URL}/finance/expenses/${id}`, {
+      const response = await fetch(`${apiConfig.getBaseUrl()}/finance/expenses/${id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(expenseData)
@@ -192,7 +192,7 @@ export default function ExpenseTracking() {
     if (!confirm('Are you sure you want to delete this expense?')) return;
     
     try {
-      const response = await fetch(`${BASE_URL}/finance/expenses/${id}`, {
+      const response = await fetch(`${apiConfig.getBaseUrl()}/finance/expenses/${id}`, {
         method: 'DELETE'
       });
       

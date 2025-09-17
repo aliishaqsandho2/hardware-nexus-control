@@ -11,7 +11,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Pagination, PaginationContent, PaginationEllipsis, PaginationItem, PaginationLink, PaginationNext, PaginationPrevious } from "@/components/ui/pagination";
 import { Package, Search, Plus, AlertTriangle, TrendingUp, DollarSign, Edit, Trash2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
-import { inventoryApi, productsApi, categoriesApi, unitsApi } from "@/services/api";
+import { inventoryApi, productsApi, categoriesApi } from "@/services/api";
 import { FilteredProductsModal } from "@/components/FilteredProductsModal";
 import { InventorySummaryCards } from "@/components/inventory/InventorySummaryCards";
 import { useInventorySummary } from "@/hooks/useInventorySummary";
@@ -180,39 +180,9 @@ const Inventory = () => {
   };
 
   const fetchUnits = async () => {
-    try {
-      const response = await unitsApi.getAll();
-      if (response.success && response.data) {
-        const unitsList: any[] = [];
-        
-        const units = Array.isArray(response.data) ? response.data : [];
-        units.forEach((unit: any) => {
-          if (typeof unit === 'string') {
-            unitsList.push({ value: unit, label: unit });
-          } else if (unit && typeof unit === 'object') {
-            unitsList.push({ 
-              value: unit.name || unit.value, 
-              label: unit.label || unit.name || unit.value 
-            });
-          }
-        });
-        
-        if (unitsList.length > 0) {
-          setUnits(unitsList);
-        } else {
-          setUnits([
-            { value: "pieces", label: "Pieces" },
-            { value: "kg", label: "Kilograms" }
-          ]);
-        }
-      }
-    } catch (error) {
-      console.error('Failed to fetch units:', error);
-      setUnits([
-        { value: "pieces", label: "Pieces" },
-        { value: "kg", label: "Kilograms" }
-      ]);
-    }
+    // Use predefined comprehensive units list instead of API call
+    const { units: predefinedUnits } = await import("@/data/storeData");
+    setUnits(predefinedUnits);
   };
 
   const handleStockAdjustment = async (formData: any) => {
@@ -671,7 +641,7 @@ const StockAdjustmentDialog = ({
     e.preventDefault();
     onSubmit({
       ...formData,
-      quantity: parseInt(formData.quantity)
+      quantity: parseFloat(formData.quantity)
     });
   };
 
@@ -701,6 +671,7 @@ const StockAdjustmentDialog = ({
           <Input
             id="quantity"
             type="number"
+            step="0.01"
             value={formData.quantity}
             onChange={(e) => setFormData({...formData, quantity: e.target.value})}
             placeholder="Enter quantity (+ for increase, - for decrease)"
@@ -767,8 +738,8 @@ const EditProductDialog = ({
     e.preventDefault();
     onSubmit({
       ...formData,
-      minStock: parseInt(formData.minStock),
-      maxStock: parseInt(formData.maxStock)
+      minStock: parseFloat(formData.minStock),
+      maxStock: parseFloat(formData.maxStock)
     });
   };
 
@@ -808,6 +779,7 @@ const EditProductDialog = ({
             <Input
               id="minStock"
               type="number"
+              step="0.01"
               value={formData.minStock}
               onChange={(e) => setFormData({...formData, minStock: e.target.value})}
               required
@@ -818,6 +790,7 @@ const EditProductDialog = ({
             <Input
               id="maxStock"
               type="number"
+              step="0.01"
               value={formData.maxStock}
               onChange={(e) => setFormData({...formData, maxStock: e.target.value})}
               required

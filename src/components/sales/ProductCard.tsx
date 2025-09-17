@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -6,7 +5,9 @@ import { Input } from "@/components/ui/input";
 import { Plus, Pin, PinOff, Info, AlertTriangle } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { ProductDetailsModal } from "./ProductDetailsModal";
+import { QuantitySuggestionPopup } from "./QuantitySuggestionPopup";
 import { useStockManagement } from '@/hooks/useStockManagement';
+import { formatQuantity } from "@/lib/utils";
 
 interface ProductCardProps {
   product: any;
@@ -16,6 +17,8 @@ interface ProductCardProps {
   onQuantityChange: (productId: number, value: string) => void;
   onAddToCart: (product: any, quantity?: number) => void;
   onAddCustomQuantity: (product: any) => void;
+  viewMode?: 'card' | 'slim';
+  index?: number; // For displaying product index in slim view
 }
 
 export const ProductCard: React.FC<ProductCardProps> = ({
@@ -25,7 +28,9 @@ export const ProductCard: React.FC<ProductCardProps> = ({
   onTogglePin,
   onQuantityChange,
   onAddToCart,
-  onAddCustomQuantity
+  onAddCustomQuantity,
+  viewMode = 'card',
+  index
 }) => {
   const { toast } = useToast();
   const { validateStock } = useStockManagement();
@@ -33,8 +38,8 @@ export const ProductCard: React.FC<ProductCardProps> = ({
   const [isValidating, setIsValidating] = useState(false);
 
   const handleQuantityInputChange = (value: string) => {
-    // Allow decimal numbers
-    if (value === '' || /^\d*\.?\d*$/.test(value)) {
+    // Allow decimal numbers with up to 2 decimal places
+    if (value === '' || /^\d*\.?\d{0,2}$/.test(value)) {
       onQuantityChange(product.id, value);
     }
   };
@@ -74,10 +79,42 @@ export const ProductCard: React.FC<ProductCardProps> = ({
     } else {
       toast({
         title: "Invalid Quantity",
-        description: "Please enter a valid quantity",
+        description: "Please enter a valid quantity (e.g., 1, 0.5, 2.25)",
         variant: "destructive"
       });
     }
+  };
+
+  const handleQuantitySuggestion = async (quantity: number) => {
+    // Validate stock before adding to cart
+    if (!product.incompleteQuantity && !product.needsQuantityUpdate) {
+      setIsValidating(true);
+      try {
+        const validation = await validateStock(product.id, quantity);
+        
+        if (!validation.isValid) {
+          toast({
+            title: "Insufficient Stock",
+            description: validation.message,
+            variant: "destructive"
+          });
+          return;
+        }
+      } catch (error) {
+        console.error('Stock validation error:', error);
+        toast({
+          title: "Validation Error",
+          description: "Could not validate stock availability",
+          variant: "destructive"
+        });
+        return;
+      } finally {
+        setIsValidating(false);
+      }
+    }
+    
+    // Add the suggested quantity to cart
+    onAddToCart(product, quantity);
   };
 
   const handleQuickAdd = async () => {
@@ -117,6 +154,145 @@ export const ProductCard: React.FC<ProductCardProps> = ({
   // Check if product has incomplete quantity information
   const hasIncompleteQuantity = product.incompleteQuantity || product.needsQuantityUpdate;
   const isOutOfStock = !hasIncompleteQuantity && (product.stock || 0) <= 0;
+
+  if (viewMode === 'slim') {
+    return (
+      <>
+        <div className={`flex items-center gap-2 p-2 border rounded-lg hover:shadow-sm transition-all duration-200 ${
+          isPinned 
+            ? 'border-blue-300 bg-blue-50 dark:border-blue-600 dark:bg-blue-900/20' 
+            : hasIncompleteQuantity
+            ? 'border-orange-300 bg-orange-50 dark:border-orange-600 dark:bg-orange-900/20'
+            : isOutOfStock
+            ? 'border-red-300 bg-red-50 dark:border-red-600 dark:bg-red-900/20'
+            : 'border-border bg-card'
+        }`}>
+          {/* Product Index */}
+          {index && (
+            <div className="flex-shrink-0 w-8 text-center">
+              <span className="text-xs font-bold text-muted-foreground bg-muted px-1.5 py-0.5 rounded-full">
+                {index}
+              </span>
+            </div>
+          )}
+
+          {/* Stock Status Warning */}
+          {(hasIncompleteQuantity || isOutOfStock) && (
+            <div className="flex-shrink-0" title={
+              hasIncompleteQuantity 
+                ? (product.quantityNote || "Incomplete quantity information")
+                : "Out of stock"
+            }>
+              <AlertTriangle className={`h-4 w-4 ${
+                isOutOfStock ? 'text-red-600' : 'text-orange-600'
+              }`} />
+            </div>
+          )}
+
+          {/* Product Name */}
+          <div className="flex-1 min-w-0">
+            <h3 className="font-medium text-sm truncate" title={product.name}>
+              {product.name}
+            </h3>
+          </div>
+
+          {/* SKU */}
+          <div className="w-24 flex-shrink-0">
+            <p className="text-xs text-muted-foreground truncate" title={product.sku}>
+              {product.sku}
+            </p>
+          </div>
+
+          {/* Price */}
+          <div className="w-24 flex-shrink-0">
+            <div className="text-sm font-bold text-blue-600">
+              PKR {product.price.toLocaleString()}
+            </div>
+            <div className="text-[10px] text-muted-foreground">
+              {hasIncompleteQuantity ? (
+                <span className="text-orange-600 font-medium">Unknown qty</span>
+              ) : isOutOfStock ? (
+                <span className="text-red-600 font-medium">Out of stock</span>
+              ) : (
+                <>{formatQuantity(product.stock)} {product.unit}</>
+              )}
+            </div>
+          </div>
+
+          {/* Quantity Input */}
+          <div className="w-20 flex-shrink-0">
+            <Input
+              type="text"
+              placeholder={`Qty`}
+              value={quantityInput}
+              onChange={(e) => handleQuantityInputChange(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') {
+                  e.preventDefault();
+                  handleQuickAdd();
+                }
+              }}
+              className="h-8 text-xs"
+              disabled={isOutOfStock && !hasIncompleteQuantity}
+            />
+          </div>
+
+          {/* Quick Add Button */}
+          <div className="w-20 flex-shrink-0">
+            <Button
+              onClick={handleQuickAdd}
+              className={`w-full text-white text-xs h-8 ${
+                hasIncompleteQuantity 
+                  ? 'bg-orange-600 hover:bg-orange-700' 
+                  : isOutOfStock
+                  ? 'bg-red-600 hover:bg-red-700'
+                  : 'bg-blue-600 hover:bg-blue-700'
+              }`}
+              disabled={isOutOfStock && !hasIncompleteQuantity || isValidating}
+            >
+              {isValidating ? 'Wait...' : hasIncompleteQuantity ? 'Add ⚠️' : isOutOfStock ? 'N/A' : 'Add'}
+            </Button>
+          </div>
+
+          {/* Actions */}
+          <div className="flex items-center gap-1 flex-shrink-0">
+            <QuantitySuggestionPopup
+              product={product}
+              onAddQuantity={handleQuantitySuggestion}
+              disabled={isOutOfStock && !hasIncompleteQuantity || isValidating}
+            />
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => setIsDetailsOpen(true)}
+              className="h-8 w-8 p-0"
+              title="View product details"
+            >
+              <Info className="h-4 w-4 text-muted-foreground hover:text-blue-600" />
+            </Button>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => onTogglePin(product.id)}
+              className="h-8 w-8 p-0"
+            >
+              {isPinned ? 
+                <Pin className="h-4 w-4 text-blue-600" /> : 
+                <PinOff className="h-4 w-4 text-muted-foreground" />
+              }
+            </Button>
+          </div>
+        </div>
+
+        {/* Product Details Modal */}
+        <ProductDetailsModal
+          open={isDetailsOpen}
+          onOpenChange={setIsDetailsOpen}
+          product={product}
+        />
+      </>
+    );
+  }
 
   return (
     <>
@@ -192,7 +368,7 @@ export const ProductCard: React.FC<ProductCardProps> = ({
                   </span>
                 ) : (
                   <>
-                    {product.stock} {product.unit} available
+                    {formatQuantity(product.stock)} {product.unit} available
                   </>
                 )}
               </div>
@@ -213,19 +389,23 @@ export const ProductCard: React.FC<ProductCardProps> = ({
                 placeholder={`Qty (${product.unit})`}
                 value={quantityInput}
                 onChange={(e) => handleQuantityInputChange(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') {
+                    e.preventDefault();
+                    handleQuickAdd();
+                  }
+                }}
                 className="h-6 text-[10px] flex-1 bg-background border-input px-1"
                 disabled={isOutOfStock && !hasIncompleteQuantity}
               />
-              <Button
-                onClick={handleAddCustomQuantity}
-                className="h-6 w-6 p-0 bg-green-600 hover:bg-green-700 text-white flex-shrink-0"
-                disabled={isOutOfStock && !hasIncompleteQuantity || !quantityInput || isValidating}
-              >
-                <Plus className="h-2.5 w-2.5" />
-              </Button>
+              <QuantitySuggestionPopup
+                product={product}
+                onAddQuantity={handleQuantitySuggestion}
+                disabled={isOutOfStock && !hasIncompleteQuantity || isValidating}
+              />
             </div>
             
-            {/* Quick Add Button - Now uses input quantity or defaults to 1 */}
+            {/* Quick Add Button */}
             <Button
               onClick={handleQuickAdd}
               className={`w-full text-white text-[10px] h-6 ${
@@ -240,11 +420,11 @@ export const ProductCard: React.FC<ProductCardProps> = ({
               {isValidating ? (
                 'Validating...'
               ) : hasIncompleteQuantity ? (
-                <>Quick Add ({quantityInput || '1'} {product.unit}) ⚠️</>
+                <>Quick Add ({formatQuantity(quantityInput || '1')} {product.unit}) ⚠️</>
               ) : isOutOfStock ? (
                 'Out of Stock'
               ) : (
-                <>Quick Add ({quantityInput || '1'} {product.unit})</>
+                <>Quick Add ({formatQuantity(quantityInput || '1')} {product.unit})</>
               )}
             </Button>
           </div>

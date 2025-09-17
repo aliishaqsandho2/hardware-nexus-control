@@ -5,9 +5,9 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { SidebarTrigger } from "@/components/ui/sidebar";
-import { Package, Search, Plus, Minus, Pin, PinOff, Filter, Menu, X, AlertTriangle, Maximize, Minimize } from "lucide-react";
+import { Package, Search, Plus, Minus, Pin, PinOff, Filter, Menu, X, AlertTriangle, Maximize, Minimize, LayoutGrid, Columns2, Columns3, Columns4, Grid3X3, Grid2X2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
-import { salesApi, customersApi, productsApi } from "@/services/api";
+import { salesApi, customersApi, productsApi, suppliersApi } from "@/services/api";
 import { QuickCustomerForm } from "@/components/QuickCustomerForm";
 import { TodaysOrdersModal } from "@/components/sales/TodaysOrdersModal";
 import { ProductCard } from "@/components/sales/ProductCard";
@@ -16,6 +16,7 @@ import { QuickProductAddModal } from "@/components/sales/QuickProductAddModal";
 import { useIsMobile } from "@/hooks/use-mobile";
 import jsPDF from 'jspdf';
 import QRCode from 'qrcode';
+import { formatQuantity } from "@/lib/utils";
 
 interface CartItem {
   productId: number;
@@ -25,6 +26,12 @@ interface CartItem {
   sku: string;
   unit: string;
   adjustedPrice?: number; // For price negotiations
+  // Outsourcing fields
+  isOutsourced?: boolean;
+  outsourcingSupplierId?: number;
+  outsourcingCostPerUnit?: number;
+  outsourcingSupplierName?: string;
+  outsourcingNotes?: string;
 }
 
 const Sales = () => {
@@ -50,6 +57,29 @@ const Sales = () => {
   const [isCustomerDialogOpen, setIsCustomerDialogOpen] = useState(false);
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [isCartCollapsed, setIsCartCollapsed] = useState(false);
+  const [productsLayout, setProductsLayout] = useState(5); // Default to 5 products per line
+  const [isProcessingSale, setIsProcessingSale] = useState(false); // Prevent double-clicking complete sale
+
+  // Load layout preference from localStorage
+  useEffect(() => {
+    const savedLayout = localStorage.getItem('salesLayoutPreference');
+    if (savedLayout) {
+      const layoutValue = parseInt(savedLayout);
+      if (layoutValue >= 1 && layoutValue <= 7) {
+        setProductsLayout(layoutValue);
+      }
+    }
+  }, []);
+
+  // Save layout preference to localStorage when it changes
+  const handleLayoutChange = (newLayout: number) => {
+    setProductsLayout(newLayout);
+    localStorage.setItem('salesLayoutPreference', newLayout.toString());
+    toast({
+      title: "Layout Updated",
+      description: `Products layout set to ${newLayout === 1 ? 'Slim' : newLayout + ' columns'}`,
+    });
+  };
 
   // Fullscreen toggle function
   const toggleFullscreen = () => {
@@ -227,14 +257,42 @@ const formatPakistaniTime = (timeString: string): string => {
     });
   };
 
+  const handleQuantityInputChange = (productId: number, value: string) => {
+    // Allow decimal numbers with up to 2 decimal places
+    if (value === '' || /^\d*\.?\d{0,2}$/.test(value)) {
+      setQuantityInputs(prev => ({...prev, [productId]: value}));
+    }
+  };
+
+  const addCustomQuantityToCart = (product: any) => {
+    const inputValue = quantityInputs[product.id];
+    const quantity = parseFloat(inputValue);
+    
+    if (inputValue && !isNaN(quantity) && quantity > 0) {
+      // Round to 2 decimal places to match database precision
+      const roundedQuantity = Math.round(quantity * 100) / 100;
+      addToCartWithCustomQuantity(product, roundedQuantity);
+    } else {
+      toast({
+        title: "Invalid Quantity",
+        description: "Please enter a valid quantity (e.g., 1, 0.5, 2.25)",
+        variant: "destructive"
+      });
+    }
+  };
+
   const addToCartWithCustomQuantity = (product: any, customQuantity?: number) => {
     const quantity = customQuantity || 1;
+    // Round to 2 decimal places to match database precision
+    const roundedQuantity = Math.round(quantity * 100) / 100;
+    
     const existingItem = cart.find(item => item.productId === product.id);
     
     if (existingItem) {
+      const newQuantity = Math.round((existingItem.quantity + roundedQuantity) * 100) / 100;
       setCart(cart.map(item => 
         item.productId === product.id 
-          ? { ...item, quantity: item.quantity + quantity }
+          ? { ...item, quantity: newQuantity }
           : item
       ));
     } else {
@@ -242,7 +300,7 @@ const formatPakistaniTime = (timeString: string): string => {
         productId: product.id,
         name: product.name,
         price: product.price,
-        quantity: quantity,
+        quantity: roundedQuantity,
         sku: product.sku,
         unit: product.unit
       }]);
@@ -253,39 +311,19 @@ const formatPakistaniTime = (timeString: string): string => {
 
     toast({
       title: "Added to Cart",
-      description: `${quantity} ${product.unit} of ${product.name} added to cart`,
+      description: `${formatQuantity(roundedQuantity)} ${product.unit} of ${product.name} added to cart`,
     });
-  };
-
-  const handleQuantityInputChange = (productId: number, value: string) => {
-    // Allow decimal numbers
-    if (value === '' || /^\d*\.?\d*$/.test(value)) {
-      setQuantityInputs(prev => ({...prev, [productId]: value}));
-    }
-  };
-
-  const addCustomQuantityToCart = (product: any) => {
-    const inputValue = quantityInputs[product.id];
-    const quantity = parseFloat(inputValue);
-    
-    if (inputValue && !isNaN(quantity) && quantity > 0) {
-      addToCartWithCustomQuantity(product, quantity);
-    } else {
-      toast({
-        title: "Invalid Quantity",
-        description: "Please enter a valid quantity",
-        variant: "destructive"
-      });
-    }
   };
 
   const updateCartQuantity = (productId: number, quantity: number) => {
     if (quantity <= 0) {
       setCart(cart.filter(item => item.productId !== productId));
     } else {
+      // Round to 2 decimal places to match database precision
+      const roundedQuantity = Math.round(quantity * 100) / 100;
       setCart(cart.map(item => 
         item.productId === productId 
-          ? { ...item, quantity }
+          ? { ...item, quantity: roundedQuantity }
           : item
       ));
     }
@@ -296,16 +334,80 @@ const formatPakistaniTime = (timeString: string): string => {
   };
 
   const updateItemPrice = (productId: number, newPrice: number) => {
-    setCart(cart.map(item => 
-      item.productId === productId 
-        ? { ...item, adjustedPrice: newPrice }
-        : item
-    ));
+    console.log('updateItemPrice called with:', { productId, newPrice });
+    
+    setCart(prevCart => {
+      const updatedCart = prevCart.map(item => {
+        if (item.productId === productId) {
+          console.log('Updating item price:', { 
+            productId: item.productId, 
+            oldPrice: item.price, 
+            oldAdjustedPrice: item.adjustedPrice,
+            newPrice 
+          });
+          return { ...item, adjustedPrice: newPrice };
+        }
+        return item;
+      });
+      console.log('Updated cart:', updatedCart);
+      return updatedCart;
+    });
+    
+    const originalItem = cart.find(item => item.productId === productId);
+    const originalPrice = originalItem?.price || 0;
+    const priceChange = newPrice - originalPrice;
+    const changeType = priceChange > 0 ? 'increased' : priceChange < 0 ? 'reduced' : 'set';
     
     toast({
       title: "Price Updated",
-      description: "Item price has been adjusted for negotiation",
+      description: `Item price has been ${changeType} to PKR ${newPrice.toLocaleString()} (${priceChange >= 0 ? '+' : ''}${priceChange.toLocaleString()} from original)`,
     });
+  };
+
+  const handleOutsourceItem = async (productId: number, data: { supplierId: number; costPerUnit: number; notes?: string }) => {
+    try {
+      // Find supplier name for display
+      let supplierName = `Supplier ${data.supplierId}`;
+      
+      try {
+        const response = await suppliersApi.getAll();
+        if (response?.success && response.data) {
+          const suppliers = Array.isArray(response.data) ? response.data : response.data.suppliers || [];
+          const supplier = suppliers.find((s: any) => s.id === data.supplierId);
+          if (supplier) {
+            supplierName = supplier.name;
+          }
+        }
+      } catch (error) {
+        console.error('Failed to fetch supplier name:', error);
+        // Continue with default name
+      }
+
+      setCart(cart.map(item => 
+        item.productId === productId 
+          ? { 
+              ...item, 
+              isOutsourced: true,
+              outsourcingSupplierId: data.supplierId,
+              outsourcingCostPerUnit: data.costPerUnit,
+              outsourcingSupplierName: supplierName,
+              outsourcingNotes: data.notes
+            }
+          : item
+      ));
+      
+      toast({
+        title: "Item Outsourced",
+        description: `Item will be outsourced to ${supplierName}`,
+      });
+    } catch (error) {
+      console.error('Failed to outsource item:', error);
+      toast({
+        title: "Outsourcing Failed",
+        description: "Could not process outsourcing request",
+        variant: "destructive"
+      });
+    }
   };
 
   const handleCheckout = async () => {
@@ -318,7 +420,19 @@ const formatPakistaniTime = (timeString: string): string => {
       return;
     }
 
+    // Prevent double-clicking - check if sale is already being processed
+    if (isProcessingSale) {
+      toast({
+        title: "Processing Sale",
+        description: "Please wait, your sale is being processed...",
+        variant: "default"
+      });
+      return;
+    }
+
     try {
+      setIsProcessingSale(true); // Set processing flag to prevent double-clicks
+      
       // Calculate total without any tax
       const totalAmount = cart.reduce((sum, item) => {
         const finalPrice = item.adjustedPrice || item.price;
@@ -332,7 +446,15 @@ const formatPakistaniTime = (timeString: string): string => {
           productId: item.productId,
           quantity: item.quantity,
           unitPrice: item.adjustedPrice || item.price,
-          totalPrice: (item.adjustedPrice || item.price) * item.quantity
+          totalPrice: (item.adjustedPrice || item.price) * item.quantity,
+          // Outsourcing data - structure matches backend expectation
+          ...(item.isOutsourced && item.outsourcingSupplierId && {
+            outsourcing: {
+              supplierId: item.outsourcingSupplierId,
+              costPerUnit: item.outsourcingCostPerUnit,
+              notes: item.outsourcingNotes
+            }
+          })
         })),
         totalAmount: totalAmount, // Pure total without tax
         subtotal: totalAmount, // Same as total since no tax
@@ -393,6 +515,8 @@ const formatPakistaniTime = (timeString: string): string => {
         description: `Error: ${error.message || 'Unknown error occurred'}`,
         variant: "destructive"
       });
+    } finally {
+      setIsProcessingSale(false); // Reset processing flag
     }
   };
 
@@ -749,7 +873,7 @@ const formatPakistaniTime = (timeString: string): string => {
     return (a.name || '').localeCompare(b.name || '');
   });
 
-  // Calculate total cart items and value (without tax)
+  // Calculate total cart items and value (with proper decimal handling)
   const totalCartItems = cart.reduce((sum, item) => sum + item.quantity, 0);
   const totalCartValue = cart.reduce((sum, item) => {
     const finalPrice = item.adjustedPrice || item.price;
@@ -809,62 +933,100 @@ const formatPakistaniTime = (timeString: string): string => {
               
             </div>
             
-            <div className="relative mb-4">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
-              <Input
-                placeholder="Search products by name or SKU..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="pl-10 h-9 md:h-10 bg-background border-input text-sm"
-              />
+            <div className="flex gap-2 mb-4">
+              <div className="relative flex-1">
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
+                <Input
+                  placeholder="Search products by name or SKU..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="pl-10 h-9 md:h-10 bg-background border-input text-sm"
+                />
+              </div>
+              
+              {/* Category Dropdown */}
+              <Select value={selectedCategory || "all"} onValueChange={(value) => setSelectedCategory(value === "all" ? null : value)}>
+                <SelectTrigger className="w-40 h-9 md:h-10 bg-background border-input">
+                  <Filter className="h-4 w-4 mr-2" />
+                  <SelectValue placeholder="Category" />
+                </SelectTrigger>
+                <SelectContent className="bg-background border-input shadow-lg z-50">
+                  <SelectItem value="all">All ({products.length})</SelectItem>
+                  {categories.map((category) => {
+                    const categoryCount = products.filter(p => p.category === category).length;
+                    return (
+                      <SelectItem key={category} value={category}>
+                        {category} ({categoryCount})
+                      </SelectItem>
+                    );
+                  })}
+                </SelectContent>
+              </Select>
+              
+              {/* Layout Dropdown */}
+              <Select value={productsLayout.toString()} onValueChange={(value) => handleLayoutChange(parseInt(value))}>
+                <SelectTrigger className="w-24 h-9 md:h-10 bg-background border-input">
+                  <LayoutGrid className="h-4 w-4" />
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent className="bg-background border-input shadow-lg z-50">
+                  <SelectItem value="1">Slim</SelectItem>
+                  <SelectItem value="2">2</SelectItem>
+                  <SelectItem value="3">3</SelectItem>
+                  <SelectItem value="4">4</SelectItem>
+                  <SelectItem value="5">5</SelectItem>
+                  <SelectItem value="6">6</SelectItem>
+                  <SelectItem value="7">7</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
 
-            {/* Dynamic Category Filter Bar */}
-            <div className="bg-muted/50 border border-border rounded-lg p-2 mb-4">
-             
-              <div className="flex gap-1 flex-wrap">
-                <Button
-                  variant={selectedCategory === null ? "default" : "outline"}
-                  size="sm"
-                  className="h-7 md:h-8 text-xs"
-                  onClick={() => setSelectedCategory(null)}
-                >
-                  All ({products.length})
-                </Button>
-                {categories.map((category) => {
-                  const categoryCount = products.filter(p => p.category === category).length;
-                  return (
-                    <Button
-                      key={category}
-                      variant={selectedCategory === category ? "default" : "outline"}
-                      size="sm"
-                      className="h-7 md:h-8 text-xs"
-                      onClick={() => setSelectedCategory(category)}
-                    >
-                      {category} ({categoryCount})
-                    </Button>
-                  );
-                })}
-              </div>
-            </div>
           </div>
 
           {/* Responsive Products Grid - INTERNAL SCROLLING ONLY */}
           <div className="flex-1 overflow-auto px-3 md:px-4 pb-4 min-h-0">
-            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 xl:grid-cols-6 2xl:grid-cols-7 gap-2">
-              {sortedProducts.map((product) => (
-                <ProductCard
-                  key={product.id}
-                  product={product}
-                  isPinned={pinnedProducts.includes(product.id)}
-                  quantityInput={quantityInputs[product.id] || ""}
-                  onTogglePin={togglePinProduct}
-                  onQuantityChange={handleQuantityInputChange}
-                  onAddToCart={addToCartWithCustomQuantity}
-                  onAddCustomQuantity={addCustomQuantityToCart}
-                />
-              ))}
-            </div>
+            {/* Conditional layout: slim view for single column, grid for others */}
+            {productsLayout === 1 ? (
+              <div className="space-y-2">
+                {sortedProducts.map((product, index) => (
+                  <ProductCard
+                    key={product.id}
+                    product={product}
+                    isPinned={pinnedProducts.includes(product.id)}
+                    quantityInput={quantityInputs[product.id] || ""}
+                    onTogglePin={togglePinProduct}
+                    onQuantityChange={handleQuantityInputChange}
+                    onAddToCart={addToCartWithCustomQuantity}
+                    onAddCustomQuantity={addCustomQuantityToCart}
+                    viewMode="slim"
+                    index={index + 1}
+                  />
+                ))}
+              </div>
+            ) : (
+              <div className={`grid gap-2 ${
+                productsLayout === 2 ? 'grid-cols-2' :
+                productsLayout === 3 ? 'grid-cols-2 md:grid-cols-3' :
+                productsLayout === 4 ? 'grid-cols-2 md:grid-cols-3 lg:grid-cols-4' :
+                productsLayout === 5 ? 'grid-cols-2 sm:grid-cols-3 lg:grid-cols-5' :
+                productsLayout === 6 ? 'grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6' :
+                'grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-7'
+              }`}>
+                {sortedProducts.map((product) => (
+                  <ProductCard
+                    key={product.id}
+                    product={product}
+                    isPinned={pinnedProducts.includes(product.id)}
+                    quantityInput={quantityInputs[product.id] || ""}
+                    onTogglePin={togglePinProduct}
+                    onQuantityChange={handleQuantityInputChange}
+                    onAddToCart={addToCartWithCustomQuantity}
+                    onAddCustomQuantity={addCustomQuantityToCart}
+                    viewMode="card"
+                  />
+                ))}
+              </div>
+            )}
           </div>
         </div>
       </div>
@@ -880,6 +1042,7 @@ const formatPakistaniTime = (timeString: string): string => {
           isCustomerDialogOpen={isCustomerDialogOpen}
           isQuickCustomerOpen={isQuickCustomerOpen}
           isCollapsed={isCartCollapsed}
+          isProcessingSale={isProcessingSale}
           onSetSelectedCustomer={setSelectedCustomer}
           onSetIsCustomerDialogOpen={setIsCustomerDialogOpen}
           onSetIsQuickCustomerOpen={setIsQuickCustomerOpen}
@@ -890,6 +1053,7 @@ const formatPakistaniTime = (timeString: string): string => {
           onCheckout={handleCheckout}
           onUpdateItemPrice={updateItemPrice}
           onToggleCollapse={() => setIsCartCollapsed(!isCartCollapsed)}
+          onOutsourceItem={handleOutsourceItem}
         />
       </div>
 
@@ -977,13 +1141,14 @@ const formatPakistaniTime = (timeString: string): string => {
                 </div>
                 
                 <Button 
-                  className="w-full bg-green-600 hover:bg-green-700 text-white"
+                  className="w-full bg-green-600 hover:bg-green-700 text-white disabled:opacity-50 disabled:cursor-not-allowed"
+                  disabled={isProcessingSale}
                   onClick={() => {
                     handleCheckout();
                     setIsCartOpen(false);
                   }}
                 >
-                  Complete Sale ({paymentMethod})
+                  {isProcessingSale ? 'Processing Sale...' : `Complete Sale (${paymentMethod})`}
                 </Button>
               </div>
             )}

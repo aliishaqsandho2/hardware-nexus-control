@@ -1,9 +1,9 @@
-
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Pagination, PaginationContent, PaginationItem, PaginationLink, PaginationNext, PaginationPrevious } from "@/components/ui/pagination";
 import { Calendar, Eye, FileText, User } from "lucide-react";
+import { formatQuantity } from "@/lib/utils";
 
 interface Sale {
   id: number;
@@ -110,7 +110,12 @@ export const OrdersTable = ({
                     <div className="text-sm">
                       {order.items.length} item{order.items.length > 1 ? 's' : ''}
                       <div className="text-xs text-slate-500">
-                        {order.items.slice(0, 2).map(item => item.productName).join(', ')}
+                        {order.items.slice(0, 2).map((item, index) => (
+                          <span key={index}>
+                            {item.productName} x {formatQuantity(item.quantity)}
+                            {index < Math.min(1, order.items.length - 1) && ', '}
+                          </span>
+                        ))}
                         {order.items.length > 2 && '...'}
                       </div>
                     </div>

@@ -7,7 +7,8 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
-import { ShoppingCart, User, X, Plus, Minus, UserPlus, Edit2, CreditCard, ChevronRight, ChevronLeft } from "lucide-react";
+import { ShoppingCart, User, X, Plus, Minus, UserPlus, Edit2, CreditCard, ChevronRight, ChevronLeft, ExternalLink } from "lucide-react";
+import { OutsourcingModal } from "./OutsourcingModal";
 
 interface CartItem {
   productId: number;
@@ -17,6 +18,11 @@ interface CartItem {
   sku: string;
   unit: string;
   adjustedPrice?: number; // For price negotiations
+  // Outsourcing fields
+  isOutsourced?: boolean;
+  outsourcingSupplierId?: number;
+  outsourcingCostPerUnit?: number;
+  outsourcingSupplierName?: string;
 }
 
 interface CartSidebarProps {
@@ -28,6 +34,7 @@ interface CartSidebarProps {
   isCustomerDialogOpen: boolean;
   isQuickCustomerOpen: boolean;
   isCollapsed?: boolean;
+  isProcessingSale?: boolean;
   onSetSelectedCustomer: (customer: any) => void;
   onSetIsCustomerDialogOpen: (open: boolean) => void;
   onSetIsQuickCustomerOpen: (open: boolean) => void;
@@ -38,6 +45,7 @@ interface CartSidebarProps {
   onCheckout: () => void;
   onUpdateItemPrice?: (productId: number, newPrice: number) => void;
   onToggleCollapse?: () => void;
+  onOutsourceItem?: (productId: number, data: { supplierId: number; costPerUnit: number; notes?: string }) => void;
 }
 
 export const CartSidebar: React.FC<CartSidebarProps> = ({
@@ -49,6 +57,7 @@ export const CartSidebar: React.FC<CartSidebarProps> = ({
   isCustomerDialogOpen,
   isQuickCustomerOpen,
   isCollapsed = false,
+  isProcessingSale = false,
   onSetSelectedCustomer,
   onSetIsCustomerDialogOpen,
   onSetIsQuickCustomerOpen,
@@ -58,11 +67,14 @@ export const CartSidebar: React.FC<CartSidebarProps> = ({
   onRemoveFromCart,
   onCheckout,
   onUpdateItemPrice,
-  onToggleCollapse
+  onToggleCollapse,
+  onOutsourceItem
 }) => {
   const [priceEditingItem, setPriceEditingItem] = useState<number | null>(null);
   const [tempPrice, setTempPrice] = useState<string>("");
   const [customerSearchTerm, setCustomerSearchTerm] = useState<string>("");
+  const [outsourcingModalOpen, setOutsourcingModalOpen] = useState(false);
+  const [selectedOutsourcingItem, setSelectedOutsourcingItem] = useState<CartItem | null>(null);
 
   const getCartTotal = () => {
     return cart.reduce((total, item) => {
@@ -78,8 +90,17 @@ export const CartSidebar: React.FC<CartSidebarProps> = ({
 
   const handlePriceSave = (productId: number) => {
     const newPrice = parseFloat(tempPrice);
-    if (!isNaN(newPrice) && newPrice > 0 && onUpdateItemPrice) {
-      onUpdateItemPrice(productId, newPrice);
+    console.log('Price save attempt:', { productId, tempPrice, newPrice, isValid: !isNaN(newPrice) && newPrice > 0 });
+    
+    if (!isNaN(newPrice) && newPrice > 0) {
+      if (onUpdateItemPrice) {
+        console.log('Calling onUpdateItemPrice with:', productId, newPrice);
+        onUpdateItemPrice(productId, newPrice);
+      } else {
+        console.error('onUpdateItemPrice function not available');
+      }
+    } else {
+      console.error('Invalid price value:', tempPrice);
     }
     setPriceEditingItem(null);
     setTempPrice("");
@@ -88,6 +109,19 @@ export const CartSidebar: React.FC<CartSidebarProps> = ({
   const handlePriceCancel = () => {
     setPriceEditingItem(null);
     setTempPrice("");
+  };
+
+  const handleOutsourceClick = (item: CartItem) => {
+    setSelectedOutsourcingItem(item);
+    setOutsourcingModalOpen(true);
+  };
+
+  const handleOutsourcingConfirm = (data: { supplierId: number; costPerUnit: number; notes?: string }) => {
+    if (selectedOutsourcingItem && onOutsourceItem) {
+      onOutsourceItem(selectedOutsourcingItem.productId, data);
+    }
+    setOutsourcingModalOpen(false);
+    setSelectedOutsourcingItem(null);
   };
 
   // Filter customers based on search term
@@ -267,14 +301,23 @@ export const CartSidebar: React.FC<CartSidebarProps> = ({
                   <div className="flex items-start justify-between mb-2">
                     <div className="flex-1">
                       <p className="font-medium text-xs text-card-foreground">{item.name}</p>
-                      <div className="flex items-center gap-2">
-                        <p className="text-xs text-muted-foreground">
-                          Original: PKR {item.price.toLocaleString()} / {item.unit}
-                        </p>
-                        {item.adjustedPrice && item.adjustedPrice !== item.price && (
-                          <Badge variant="secondary" className="text-xs">Negotiated</Badge>
-                        )}
-                      </div>
+                       <div className="flex items-center gap-2">
+                         <p className="text-xs text-muted-foreground">
+                           Original: PKR {item.price.toLocaleString()} / {item.unit}
+                         </p>
+                         {item.adjustedPrice && item.adjustedPrice !== item.price && (
+                           <Badge 
+                             variant="secondary" 
+                             className={`text-xs ${
+                               item.adjustedPrice > item.price 
+                                 ? 'bg-red-100 text-red-800 border-red-300' 
+                                 : 'bg-green-100 text-green-800 border-green-300'
+                             }`}
+                           >
+                             {item.adjustedPrice > item.price ? 'Increased' : 'Reduced'}
+                           </Badge>
+                         )}
+                       </div>
                     </div>
                     <Button
                       variant="ghost"
@@ -290,13 +333,22 @@ export const CartSidebar: React.FC<CartSidebarProps> = ({
                   <div className="mb-2">
                     {priceEditingItem === item.productId ? (
                       <div className="flex items-center gap-1">
-                        <Input
-                          type="number"
-                          value={tempPrice}
-                          onChange={(e) => setTempPrice(e.target.value)}
-                          className="h-6 text-xs flex-1"
-                          placeholder="New price"
-                        />
+                         <Input
+                           type="number"
+                           step="0.01"
+                           min="0.01"
+                           value={tempPrice}
+                           onChange={(e) => setTempPrice(e.target.value)}
+                           className="h-6 text-xs flex-1"
+                           placeholder="New price"
+                           onKeyPress={(e) => {
+                             if (e.key === 'Enter') {
+                               handlePriceSave(item.productId);
+                             } else if (e.key === 'Escape') {
+                               handlePriceCancel();
+                             }
+                           }}
+                         />
                         <Button
                           variant="outline"
                           size="sm"
@@ -315,48 +367,97 @@ export const CartSidebar: React.FC<CartSidebarProps> = ({
                         </Button>
                       </div>
                     ) : (
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-1">
-                          <span className="text-xs font-medium">
-                            PKR {(item.adjustedPrice || item.price).toLocaleString()} / {item.unit}
-                          </span>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => handlePriceEdit(item)}
-                            className="h-4 w-4 p-0 text-blue-600 hover:text-blue-800"
-                            title="Negotiate price"
-                          >
-                            <Edit2 className="h-2.5 w-2.5" />
-                          </Button>
-                        </div>
-                      </div>
+                   <div className="flex items-center justify-between">
+                     <div className="flex items-center gap-1">
+                       <span className="text-xs font-medium">
+                         PKR {(item.adjustedPrice || item.price).toLocaleString()} / {item.unit}
+                       </span>
+                       <Button
+                         variant="ghost"
+                         size="sm"
+                         onClick={() => handlePriceEdit(item)}
+                         className="h-4 w-4 p-0 text-blue-600 hover:text-blue-800"
+                         title="Negotiate price"
+                       >
+                         <Edit2 className="h-2.5 w-2.5" />
+                       </Button>
+                       <Button
+                         variant="ghost"
+                         size="sm"
+                         onClick={() => handleOutsourceClick(item)}
+                         className={`h-4 w-4 p-0 ${
+                           item.isOutsourced 
+                             ? 'text-orange-600 hover:text-orange-800' 
+                             : 'text-gray-600 hover:text-orange-600'
+                         }`}
+                         title={item.isOutsourced ? `Outsourced to ${item.outsourcingSupplierName}` : 'Outsource item'}
+                         disabled={item.isOutsourced}
+                       >
+                         <ExternalLink className="h-2.5 w-2.5" />
+                       </Button>
+                     </div>
+                     {item.isOutsourced && (
+                       <div className="text-xs text-orange-600 dark:text-orange-400 font-medium flex items-center gap-1">
+                         <ExternalLink className="h-3 w-3" />
+                         Outsourced
+                       </div>
+                     )}
+                   </div>
                     )}
                   </div>
 
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-1">
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => onUpdateCartQuantity(item.productId, item.quantity - 0.25)}
-                        className="h-6 w-6 p-0 bg-background"
-                      >
-                        <Minus className="h-3 w-3" />
-                      </Button>
-                      <span className="w-14 text-center text-xs font-medium text-card-foreground">{item.quantity} {item.unit}</span>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => onUpdateCartQuantity(item.productId, item.quantity + 0.25)}
-                        className="h-6 w-6 p-0 bg-background"
-                      >
-                        <Plus className="h-3 w-3" />
-                      </Button>
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-1">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => onUpdateCartQuantity(item.productId, item.quantity - 0.25)}
+                          className="h-6 w-6 p-0 bg-background"
+                        >
+                          <Minus className="h-3 w-3" />
+                        </Button>
+                        <span className="w-14 text-center text-xs font-medium text-card-foreground">{item.quantity} {item.unit}</span>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => onUpdateCartQuantity(item.productId, item.quantity + 0.25)}
+                          className="h-6 w-6 p-0 bg-background"
+                        >
+                          <Plus className="h-3 w-3" />
+                        </Button>
+                      </div>
+                      <p className="font-semibold text-blue-600 text-xs">
+                        PKR {((item.adjustedPrice || item.price) * item.quantity).toLocaleString()}
+                      </p>
                     </div>
-                    <p className="font-semibold text-blue-600 text-xs">
-                      PKR {((item.adjustedPrice || item.price) * item.quantity).toLocaleString()}
-                    </p>
+
+
+                    {/* Outsourcing Details */}
+                    {item.isOutsourced && (
+                      <div className="bg-orange-50 dark:bg-orange-900/20 p-2 rounded border border-orange-200 dark:border-orange-700">
+                        <div className="text-xs space-y-1">
+                          <div className="flex justify-between">
+                            <span className="text-orange-700 dark:text-orange-300">Supplier:</span>
+                            <span className="font-medium text-orange-900 dark:text-orange-100">
+                              {item.outsourcingSupplierName}
+                            </span>
+                          </div>
+                          <div className="flex justify-between">
+                            <span className="text-orange-700 dark:text-orange-300">Cost:</span>
+                            <span className="font-medium text-orange-900 dark:text-orange-100">
+                              PKR {item.outsourcingCostPerUnit?.toLocaleString()} / {item.unit}
+                            </span>
+                          </div>
+                          <div className="flex justify-between">
+                            <span className="text-orange-700 dark:text-orange-300">Total Cost:</span>
+                            <span className="font-medium text-orange-900 dark:text-orange-100">
+                              PKR {((item.outsourcingCostPerUnit || 0) * item.quantity).toLocaleString()}
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+                    )}
                   </div>
                 </div>
               ))
@@ -378,10 +479,11 @@ export const CartSidebar: React.FC<CartSidebarProps> = ({
           </div>
           <Button
             onClick={onCheckout}
-            className="w-full bg-green-600 hover:bg-green-700 text-white h-10 text-sm font-medium"
+            disabled={isProcessingSale}
+            className="w-full bg-green-600 hover:bg-green-700 text-white h-10 text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed"
             size="lg"
           >
-            Complete Sale ({paymentMethod === 'cash' ? 'Cash' : paymentMethod === 'credit' ? 'Credit' : 'Card'})
+            {isProcessingSale ? 'Processing Sale...' : `Complete Sale (${paymentMethod === 'cash' ? 'Cash' : paymentMethod === 'credit' ? 'Credit' : 'Card'})`}
           </Button>
         </div>
       )}
@@ -430,6 +532,14 @@ export const CartSidebar: React.FC<CartSidebarProps> = ({
           </div>
         </DialogContent>
       </Dialog>
+
+      {/* Outsourcing Modal */}
+      <OutsourcingModal
+        open={outsourcingModalOpen}
+        onOpenChange={setOutsourcingModalOpen}
+        cartItem={selectedOutsourcingItem}
+        onConfirm={handleOutsourcingConfirm}
+      />
     </div>
   );
 };

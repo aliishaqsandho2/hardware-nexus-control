@@ -18,13 +18,15 @@ import {
 } from "@/components/ui/pagination";
 import { Package, Search, Plus, Edit, Trash2, AlertTriangle, RefreshCw, FileText } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
-import { productsApi, categoriesApi, unitsApi } from "@/services/api";
+import { productsApi, categoriesApi } from "@/services/api";
 import { ProductDetailsModal } from "@/components/sales/ProductDetailsModal";
 import { FilteredProductsModal } from "@/components/FilteredProductsModal";
 import { EnhancedExportModal } from "@/components/products/EnhancedExportModal";
 import { Eye } from "lucide-react";
 import { generateSKU } from "@/utils/skuGenerator";
-import jsPDF from 'jspdf';
+import { formatQuantity } from "@/lib/utils";
+import { generateStockReportPDF } from "@/utils/stockReportPdfGenerator";
+import { units as predefinedUnits } from "@/data/storeData";
 
 const Products = () => {
   const { toast } = useToast();
@@ -98,38 +100,9 @@ const Products = () => {
     }
   };
 
-  const fetchUnits = async () => {
-    try {
-      const response = await unitsApi.getAll();
-      if (response.success && response.data) {
-        console.log('Units response:', response.data);
-        const unitsList: any[] = [];
-        
-        if (Array.isArray(response.data)) {
-          response.data.forEach((unit: any) => {
-            if (typeof unit === 'string') {
-              unitsList.push({ value: unit, label: unit });
-            } else if (unit && typeof unit === 'object') {
-              unitsList.push({ 
-                value: unit.name || unit.value, 
-                label: unit.label || unit.name || unit.value 
-              });
-            }
-          });
-        }
-        
-        setUnits(unitsList);
-      }
-    } catch (error) {
-      console.error('Failed to fetch units:', error);
-      setUnits([
-        { value: "pieces", label: "Pieces" },
-        { value: "kg", label: "Kilograms" },
-        { value: "meters", label: "Meters" },
-        { value: "liters", label: "Liters" },
-        { value: "sets", label: "Sets" },
-      ]);
-    }
+  const fetchUnits = () => {
+    // Use predefined comprehensive units list instead of API call
+    setUnits(predefinedUnits);
   };
 
   const fetchProducts = async (page = 1) => {
@@ -212,36 +185,6 @@ const Products = () => {
         });
         return;
       }
-      
-      // Create PDF
-      const pdf = new jsPDF();
-      const pageWidth = pdf.internal.pageSize.width;
-      const pageHeight = pdf.internal.pageSize.height;
-      const margin = 20;
-      let yPos = margin;
-
-      // Title
-      pdf.setFontSize(20);
-      pdf.setFont('helvetica', 'bold');
-      const title = selectedCategories.includes("all") 
-        ? 'Complete Stock Export Report' 
-        : `Stock Report - ${selectedCategories.join(', ')}`;
-      pdf.text(title, pageWidth / 2, yPos, { align: 'center' });
-      yPos += 15;
-
-      // Export info
-      pdf.setFontSize(10);
-      pdf.setFont('helvetica', 'normal');
-      pdf.text(`Export Date: ${new Date().toLocaleString()}`, margin, yPos);
-      yPos += 8;
-      pdf.text(`Total Products: ${allProductsToExport.length}`, margin, yPos);
-      yPos += 8;
-      pdf.text(`Export Type: ${exportType}`, margin, yPos);
-      yPos += 8;
-      if (!selectedCategories.includes("all")) {
-        pdf.text(`Categories: ${selectedCategories.join(', ')}`, margin, yPos);
-        yPos += 8;
-      }
 
       // Calculate total stock value
       const totalStockValue = allProductsToExport.reduce((total: number, product: any) => {
@@ -249,100 +192,33 @@ const Products = () => {
         const price = product.costPrice || product.price || 0;
         return total + (stock * price);
       }, 0);
-      pdf.text(`Total Stock Value: PKR ${totalStockValue.toLocaleString()}`, margin, yPos);
-      yPos += 15;
 
-      // Table headers based on export type
-      pdf.setFontSize(8);
-      pdf.setFont('helvetica', 'bold');
-      let headers: string[];
-      let colWidths: number[];
-      
-      if (exportType === 'summary') {
-        headers = ['Product Name', 'SKU', 'Category', 'Stock'];
-        colWidths = [70, 40, 40, 30];
-      } else if (exportType === 'stock') {
-        headers = ['Product Name', 'Stock', 'Unit', 'Price', 'Value'];
-        colWidths = [60, 30, 20, 30, 40];
-      } else {
-        headers = ['Product Name', 'SKU', 'Category', 'Stock', 'Unit', 'Price', 'Value'];
-        colWidths = [50, 30, 25, 20, 15, 25, 25];
-      }
-      
-      let xPos = margin;
-      headers.forEach((header, index) => {
-        pdf.text(header, xPos, yPos);
-        xPos += colWidths[index];
-      });
-      yPos += 8;
+      // Prepare data for the new PDF generator
+      const reportData = {
+        title: selectedCategories.includes("all") 
+          ? 'Complete Stock Export Report' 
+          : `Stock Report - ${selectedCategories.join(', ')}`,
+        products: allProductsToExport.map((product: any) => ({
+          id: product.id,
+          name: product.name || '',
+          category: product.category || '',
+          stock: product.stock || 0,
+          unit: product.unit || 'pcs',
+          price: product.price || 0,
+          costPrice: product.costPrice || product.price || 0
+        })),
+        categories: selectedCategories.includes("all") ? ["All Categories"] : selectedCategories,
+        exportDate: new Date().toLocaleString(),
+        totalProducts: allProductsToExport.length,
+        totalStockValue: totalStockValue
+      };
 
-      // Draw line under headers
-      pdf.line(margin, yPos - 2, pageWidth - margin, yPos - 2);
-      yPos += 3;
-
-      // Table data
-      pdf.setFont('helvetica', 'normal');
-      allProductsToExport.forEach((product: any) => {
-        // Check if we need a new page
-        if (yPos > pageHeight - 30) {
-          pdf.addPage();
-          yPos = margin;
-        }
-
-        xPos = margin;
-        const stock = product.stock || 0;
-        const price = product.costPrice || product.price || 0;
-        const productValue = stock * price;
-        
-        let rowData: string[];
-        
-        if (exportType === 'summary') {
-          rowData = [
-            (product.name || '').substring(0, 25) + ((product.name || '').length > 25 ? '...' : ''),
-            product.sku || '',
-            (product.category || '').substring(0, 15) + ((product.category || '').length > 15 ? '...' : ''),
-            stock.toString()
-          ];
-        } else if (exportType === 'stock') {
-          rowData = [
-            (product.name || '').substring(0, 22) + ((product.name || '').length > 22 ? '...' : ''),
-            stock.toString(),
-            product.unit || 'pcs',
-            price.toLocaleString(),
-            productValue.toLocaleString()
-          ];
-        } else {
-          rowData = [
-            (product.name || '').substring(0, 20) + ((product.name || '').length > 20 ? '...' : ''),
-            product.sku || '',
-            (product.category || '').substring(0, 12) + ((product.category || '').length > 12 ? '...' : ''),
-            stock.toString(),
-            product.unit || 'pcs',
-            price.toLocaleString(),
-            productValue.toLocaleString()
-          ];
-        }
-
-        rowData.forEach((data, index) => {
-          pdf.text(data, xPos, yPos);
-          xPos += colWidths[index];
-        });
-        yPos += 6;
-      });
-
-      // Footer
-      yPos = pageHeight - 20;
-      pdf.setFontSize(8);
-      pdf.text(`Generated by Inventory Management System`, pageWidth / 2, yPos, { align: 'center' });
-
-      // Save PDF
-      const categoryStr = selectedCategories.includes("all") ? "all" : selectedCategories.join("_");
-      const filename = `stock_export_${categoryStr}_${exportType}_${new Date().toISOString().split('T')[0]}.pdf`;
-      pdf.save(filename);
+      // Generate the professional PDF
+      const filename = await generateStockReportPDF(reportData);
 
       toast({
-        title: "PDF Export Successful",
-        description: `Exported ${allProductsToExport.length} products to PDF.`,
+        title: "Professional Stock Report Generated!",
+        description: `Successfully exported ${allProductsToExport.length} products with sales data.`,
       });
       
       console.log('Enhanced PDF export completed successfully');
@@ -630,6 +506,7 @@ const Products = () => {
               onClose={() => setIsDialogOpen(false)} 
               categories={categories} 
               units={units}
+              onOpenCategoryDialog={() => setIsCategoryDialogOpen(true)}
             />
           </Dialog>
         </div>
@@ -766,7 +643,7 @@ const Products = () => {
                         
                         <div className="flex justify-between items-center">
                           <Badge variant={product.stock <= product.minStock ? "destructive" : "default"}>
-                            {product.stock} {product.unit}s
+                            {formatQuantity(product.stock)} {product.unit}s
                           </Badge>
                           {product.stock <= product.minStock && (
                             <AlertTriangle className="h-4 w-4 text-red-500" />
@@ -824,6 +701,7 @@ const Products = () => {
             units={units}
             initialData={selectedProduct}
             isEdit={true}
+            onOpenCategoryDialog={() => setIsCategoryDialogOpen(true)}
           />
         </Dialog>
       )}
@@ -851,7 +729,8 @@ const ProductDialog = ({
   categories, 
   units,
   initialData = null, 
-  isEdit = false 
+  isEdit = false,
+  onOpenCategoryDialog
 }: { 
   onSubmit: (data: any) => void; 
   onClose: () => void; 
@@ -859,6 +738,7 @@ const ProductDialog = ({
   units: any[];
   initialData?: any;
   isEdit?: boolean;
+  onOpenCategoryDialog?: () => void;
 }) => {
   const [formData, setFormData] = useState({
     name: initialData?.name || "",
@@ -878,10 +758,10 @@ const ProductDialog = ({
     const submitData = {
       ...formData,
       price: parseFloat(formData.price),
-      stock: parseInt(formData.stock),
-      minStock: parseInt(formData.minStock),
+      stock: parseFloat(formData.stock),
+      minStock: parseFloat(formData.minStock),
       costPrice: parseFloat(formData.costPrice),
-      maxStock: parseInt(formData.maxStock)
+      maxStock: parseFloat(formData.maxStock)
     };
     onSubmit(submitData);
     if (!isEdit) {
@@ -980,6 +860,7 @@ const ProductDialog = ({
             <Input
               id="stock"
               type="number"
+              step="0.01"
               value={formData.stock}
               onChange={(e) => handleInputChange('stock', e.target.value)}
               required
@@ -990,6 +871,7 @@ const ProductDialog = ({
             <Input
               id="minStock"
               type="number"
+              step="0.01"
               value={formData.minStock}
               onChange={(e) => handleInputChange('minStock', e.target.value)}
               required
@@ -997,16 +879,28 @@ const ProductDialog = ({
           </div>
           <div>
             <Label htmlFor="category">Category</Label>
-            <Select value={formData.category} onValueChange={(value) => handleInputChange('category', value)}>
-              <SelectTrigger>
-                <SelectValue placeholder="Select category" />
-              </SelectTrigger>
-              <SelectContent>
-                {categories.filter(cat => cat.value !== "all").map((category) => (
-                  <SelectItem key={category.value} value={category.value}>{category.label}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            <div className="flex gap-1">
+              <Select value={formData.category} onValueChange={(value) => handleInputChange('category', value)}>
+                <SelectTrigger className="w-[85%]">
+                  <SelectValue placeholder="Select category" />
+                </SelectTrigger>
+                <SelectContent>
+                  {categories.filter(cat => cat.value !== "all").map((category) => (
+                    <SelectItem key={category.value} value={category.value}>{category.label}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={onOpenCategoryDialog}
+                className="px-2 w-[15%] flex items-center justify-center"
+                title="Add new category"
+              >
+                <Plus className="h-3 w-3" />
+              </Button>
+            </div>
           </div>
           <div>
             <Label htmlFor="unit">Unit</Label>

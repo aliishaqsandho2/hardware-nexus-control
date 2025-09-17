@@ -13,6 +13,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Database, Plus, ArrowUp, ArrowDown, Calendar, TrendingUp, TrendingDown, CreditCard, DollarSign, Users, FileText, Package, RefreshCw, Wallet, Building2, Receipt, Target } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { financeApi, type FinanceOverview, type AccountsReceivable, type Expense } from "@/services/financeApi";
+import { apiConfig } from "@/utils/apiConfig";
 
 type AccountsPayable = {
   id: number;
@@ -130,7 +131,7 @@ const Finance = () => {
 
   const handleRecordPayment = async (paymentData: any) => {
     try {
-      const res = await fetch("https://usmanhardware.site/wp-json/ims/v1/finance/payments", {
+      const res = await fetch(`${apiConfig.getBaseUrl()}/finance/payments`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({

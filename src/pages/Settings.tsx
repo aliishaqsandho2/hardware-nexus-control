@@ -1,10 +1,11 @@
 
-import { Save, User, Store, Bell, Shield, Database, Palette, Globe } from "lucide-react";
+import { Save, User, Store, Bell, Shield, Database, Palette, Globe, Settings as SettingsIcon, Type } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Separator } from "@/components/ui/separator";
 import { SidebarTrigger } from "@/components/ui/sidebar";
@@ -12,11 +13,15 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { settingsApi, SettingsData } from "@/services/settingsApi";
 import { useToast } from "@/hooks/use-toast";
 import { useState, useEffect } from "react";
+import { apiConfig } from "@/utils/apiConfig";
+import { useFont, fontOptions } from "@/components/FontProvider";
 
 export default function Settings() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const { font, setFont } = useFont();
   const [formData, setFormData] = useState<SettingsData | null>(null);
+  const [apiBaseUrl, setApiBaseUrl] = useState(apiConfig.getBaseUrl());
 
   const { data: settingsData, isLoading } = useQuery({
     queryKey: ['settings'],
@@ -51,6 +56,23 @@ export default function Settings() {
     if (formData) {
       updateSettingsMutation.mutate(formData);
     }
+  };
+
+  const handleSaveApiUrl = () => {
+    apiConfig.setBaseUrl(apiBaseUrl);
+    toast({
+      title: "API Configuration Updated",
+      description: "Base URL has been saved successfully.",
+    });
+  };
+
+  const handleResetApiUrl = () => {
+    apiConfig.resetToDefault();
+    setApiBaseUrl(apiConfig.getBaseUrl());
+    toast({
+      title: "API Configuration Reset",
+      description: "Base URL has been reset to default.",
+    });
   };
 
   const updateField = (section: keyof SettingsData, field: string, value: any) => {
@@ -100,11 +122,12 @@ export default function Settings() {
       </div>
 
       <Tabs defaultValue="profile" className="w-full">
-        <TabsList className="grid w-full grid-cols-4">
+        <TabsList className="grid w-full grid-cols-5">
           <TabsTrigger value="profile">Profile</TabsTrigger>
           <TabsTrigger value="store">Store</TabsTrigger>
           <TabsTrigger value="notifications">Notifications</TabsTrigger>
           <TabsTrigger value="system">System</TabsTrigger>
+          <TabsTrigger value="api">API</TabsTrigger>
         </TabsList>
 
         <TabsContent value="profile" className="space-y-6">
@@ -323,6 +346,78 @@ export default function Settings() {
                       checked={formData.system?.darkMode || false}
                       onCheckedChange={(checked) => updateField('system', 'darkMode', checked)}
                     />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="fontFamily">Font Family</Label>
+                    <Select value={font} onValueChange={setFont}>
+                      <SelectTrigger className="w-full">
+                        <SelectValue placeholder="Select font family" />
+                      </SelectTrigger>
+                      <SelectContent className="bg-popover border border-border">
+                        {fontOptions.map((fontOption) => (
+                          <SelectItem key={fontOption.value} value={fontOption.value} className="hover:bg-accent">
+                            <div className="flex flex-col items-start">
+                              <span className="font-medium">{fontOption.label}</span>
+                              <span className="text-xs text-muted-foreground">{fontOption.description}</span>
+                            </div>
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <p className="text-sm text-muted-foreground">
+                      Selected font will be applied to the entire application
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="api" className="space-y-6">
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <SettingsIcon className="h-5 w-5" />
+                API Configuration
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-6">
+              <div className="space-y-4">
+                <h4 className="font-medium">Base URL Configuration</h4>
+                <div className="space-y-3">
+                  <div className="space-y-2">
+                    <Label htmlFor="apiBaseUrl">API Base URL</Label>
+                    <Input 
+                      id="apiBaseUrl" 
+                      placeholder="https://example.com/wp-json/ims/v1"
+                      value={apiBaseUrl}
+                      onChange={(e) => setApiBaseUrl(e.target.value)}
+                    />
+                    <p className="text-sm text-muted-foreground">
+                      This URL will be used for all API requests across the application.
+                    </p>
+                  </div>
+                  <div className="flex gap-3">
+                    <Button 
+                      onClick={handleSaveApiUrl}
+                      className="bg-blue-600 hover:bg-blue-700"
+                    >
+                      <Save className="h-4 w-4 mr-2" />
+                      Save URL
+                    </Button>
+                    <Button 
+                      variant="outline"
+                      onClick={handleResetApiUrl}
+                    >
+                      <Database className="h-4 w-4 mr-2" />
+                      Reset to Default
+                    </Button>
+                  </div>
+                  <div className="p-3 bg-muted/50 rounded-lg">
+                    <p className="text-sm text-muted-foreground">
+                      <strong>Current URL:</strong> {apiConfig.getBaseUrl()}
+                    </p>
                   </div>
                 </div>
               </div>

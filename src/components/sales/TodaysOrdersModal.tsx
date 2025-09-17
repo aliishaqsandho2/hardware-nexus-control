@@ -15,6 +15,16 @@ export const TodaysOrdersModal: React.FC<TodaysOrdersModalProps> = ({
   onOpenChange,
   orders
 }) => {
+  // Helper function to format quantity properly
+  const formatQuantity = (quantity: number) => {
+    // If quantity is a whole number, show without decimals
+    if (quantity % 1 === 0) {
+      return quantity.toString();
+    }
+    // If quantity has decimals, show up to 2 decimal places, removing trailing zeros
+    return parseFloat(quantity.toFixed(2)).toString();
+  };
+
   const getStatusIcon = (status: string) => {
     switch (status) {
       case 'completed':
@@ -90,7 +100,7 @@ export const TodaysOrdersModal: React.FC<TodaysOrdersModalProps> = ({
                           <div className="space-y-1">
                             {order.items.slice(0, 3).map((item: any, index: number) => (
                               <div key={index} className="flex justify-between text-xs">
-                                <span className="text-card-foreground">{item.productName} x {item.quantity}</span>
+                                <span className="text-card-foreground">{item.productName} x {formatQuantity(item.quantity)}</span>
                                 <span className="font-medium">PKR {(item.totalPrice || item.total)?.toLocaleString()}</span>
                               </div>
                             ))}

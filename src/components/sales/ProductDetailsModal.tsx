@@ -31,7 +31,11 @@ export const ProductDetailsModal: React.FC<ProductDetailsModalProps> = ({
   const fetchProductSalesData = async () => {
     try {
       setLoading(true);
-      const response = await salesApi.getAll({ limit: 1000 });
+      // Fetch ALL sales data without any date restrictions to get complete history
+      const response = await salesApi.getAll({ 
+        limit: 5000, // Increased limit to ensure we get complete history
+        // Remove any date filters to get all-time data
+      });
       if (response.success) {
         const allSales = response.data?.sales || response.data || [];
         

@@ -12,9 +12,11 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { User, Package, Calendar, DollarSign, RotateCcw, AlertTriangle, Minus, Plus, ArrowLeft, Edit2, Save, X } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
-import { salesApi, customersApi } from "@/services/api";
+import { salesApi, customersApi, outsourcingApi } from "@/services/api";
 import { useCustomerBalance } from "@/hooks/useCustomerBalance";
 import { useStockManagement } from "@/hooks/useStockManagement";
+import { apiConfig } from "@/utils/apiConfig";
+import { formatQuantity } from "@/lib/utils";
 
 interface OrderDetailsModalProps {
   open: boolean;
@@ -32,6 +34,7 @@ export const OrderDetailsModal = ({ open, onOpenChange, order, onOrderUpdated }:
   const [adjustmentNotes, setAdjustmentNotes] = useState("");
   const [adjustmentLoading, setAdjustmentLoading] = useState(false);
   const [showCancelConfirm, setShowCancelConfirm] = useState(false);
+  const [outsourcedItems, setOutsourcedItems] = useState<any[]>([]);
   
   // Edit mode states
   const [editMode, setEditMode] = useState<'status' | 'payment' | 'customer' | null>(null);
@@ -48,14 +51,61 @@ export const OrderDetailsModal = ({ open, onOpenChange, order, onOrderUpdated }:
   // FIXED: Move useEffect before early return to follow Rules of Hooks
   useEffect(() => {
     if (order) {
+      console.log('Order data in modal:', order);
+      console.log('Order items:', order.items);
+      
+      // Log each item's quantity for debugging
+      if (order.items && Array.isArray(order.items)) {
+        order.items.forEach((item: any, index: number) => {
+          console.log(`Item ${index}:`, {
+            productName: item.productName,
+            quantity: item.quantity,
+            quantityType: typeof item.quantity,
+            unitPrice: item.unitPrice,
+            total: item.total
+          });
+        });
+      }
+      
       setEditValues({
         status: order.status || '',
         paymentMethod: order.paymentMethod || '',
         customerId: order.customerId || null,
         customerName: order.customerName || ''
       });
+      
+      // Fetch outsourcing data for this order
+      fetchOutsourcingData();
     }
   }, [order]);
+
+  const fetchOutsourcingData = async () => {
+    if (!order?.id) return;
+    
+    try {
+      // Get all outsourcing orders and filter by sale_id client-side
+      const response = await outsourcingApi.getAll({ 
+        limit: 1000
+      });
+      
+      if (response.success && response.data.orders) {
+        // Filter by sale_id on client side
+        const orderOutsourcedItems = response.data.orders.filter(
+          (outsourcedItem: any) => outsourcedItem.sale_id === order.id
+        );
+        setOutsourcedItems(orderOutsourcedItems);
+      }
+    } catch (error) {
+      console.error('Failed to fetch outsourcing data:', error);
+    }
+  };
+
+  const isItemOutsourced = (item: any, itemIndex: number) => {
+    // Check if this item has any outsourcing orders
+    return outsourcedItems.some(outsourcedItem => 
+      outsourcedItem.product_id === item.productId
+    );
+  };
 
   if (!order) return null;
 
@@ -192,7 +242,7 @@ export const OrderDetailsModal = ({ open, onOpenChange, order, onOrderUpdated }:
         console.log('Updating payment method from', order.paymentMethod, 'to:', editValues.paymentMethod);
         
         // Use the existing details endpoint for payment method updates
-        const response = await fetch(`https://usmanhardware.site/wp-json/ims/v1/sales/${order.id}/details`, {
+        const response = await fetch(`${apiConfig.getBaseUrl()}/sales/${order.id}/details`, {
           method: 'PUT',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ 
@@ -215,7 +265,7 @@ export const OrderDetailsModal = ({ open, onOpenChange, order, onOrderUpdated }:
         const updateData = { customerId: editValues.customerId };
         console.log('Updating customer to:', editValues.customerId);
         
-        const response = await fetch(`https://usmanhardware.site//wp-json/ims/v1/sales/${order.id}/details`, {
+        const response = await fetch(`${apiConfig.getBaseUrl()}/sales/${order.id}/details`, {
           method: 'PUT',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(updateData)
@@ -239,9 +289,10 @@ export const OrderDetailsModal = ({ open, onOpenChange, order, onOrderUpdated }:
       
     } catch (error) {
       console.error('Failed to update order:', error);
+      const errorMessage = error instanceof Error ? error.message : `Failed to update ${editMode}. Please try again.`;
       toast({
         title: "Update Failed",
-        description: `Failed to update ${editMode}. Please try again.`,
+        description: errorMessage,
         variant: "destructive"
       });
     } finally {
@@ -562,7 +613,7 @@ export const OrderDetailsModal = ({ open, onOpenChange, order, onOrderUpdated }:
                 </Card>
               </div>
 
-              {/* Order Items */}
+              {/* Order Items - FIXED TABLE */}
               <Card>
                 <CardHeader>
                   <CardTitle className="text-sm flex items-center gap-2">
@@ -582,14 +633,33 @@ export const OrderDetailsModal = ({ open, onOpenChange, order, onOrderUpdated }:
                     </TableHeader>
                     <TableBody>
                       {order.items && order.items.length > 0 ? (
-                        order.items.map((item: any, index: number) => (
-                          <TableRow key={index}>
-                            <TableCell>{item.productName || 'Unknown Product'}</TableCell>
-                            <TableCell>{item.quantity || 0}</TableCell>
-                            <TableCell>PKR {(item.unitPrice || 0).toFixed(2)}</TableCell>
-                            <TableCell>PKR {(item.total || 0).toFixed(2)}</TableCell>
-                          </TableRow>
-                        ))
+                        order.items.map((item: any, index: number) => {
+                          console.log(`Rendering item ${index}:`, item);
+                          const formattedQuantity = formatQuantity(item.quantity);
+                          const itemOutsourced = isItemOutsourced(item, index);
+                          console.log(`Formatted quantity for ${item.productName}:`, formattedQuantity);
+                          
+                          return (
+                            <TableRow 
+                              key={index} 
+                              className={itemOutsourced ? "bg-orange-50 border-orange-200" : ""}
+                            >
+                              <TableCell>
+                                <div className="flex items-center gap-2">
+                                  {itemOutsourced && (
+                                    <Badge className="bg-orange-100 text-orange-700 border-orange-200 text-xs">
+                                      Outsourced
+                                    </Badge>
+                                  )}
+                                  <span>{item.productName || 'Unknown Product'}</span>
+                                </div>
+                              </TableCell>
+                              <TableCell className="font-medium text-blue-600">{formattedQuantity}</TableCell>
+                              <TableCell>PKR {(item.unitPrice || 0).toFixed(2)}</TableCell>
+                              <TableCell>PKR {(item.total || 0).toFixed(2)}</TableCell>
+                            </TableRow>
+                          );
+                        })
                       ) : (
                         <TableRow>
                           <TableCell colSpan={4} className="text-center text-gray-500">
@@ -678,7 +748,7 @@ export const OrderDetailsModal = ({ open, onOpenChange, order, onOrderUpdated }:
                           <div>
                             <h4 className="font-semibold text-gray-800">{item.productName}</h4>
                             <p className="text-sm text-gray-600">
-                              Original Quantity: <span className="font-medium">{item.originalQuantity}</span>
+                              Original Quantity: <span className="font-medium">{formatQuantity(item.originalQuantity)}</span>
                             </p>
                           </div>
                           <div className="text-right">
@@ -698,7 +768,7 @@ export const OrderDetailsModal = ({ open, onOpenChange, order, onOrderUpdated }:
                                 variant="outline"
                                 size="sm"
                                 className="h-8 w-8 p-0"
-                                onClick={() => updateReturnQuantity(index, item.returnQuantity - 1)}
+                                onClick={() => updateReturnQuantity(index, item.returnQuantity - 0.1)}
                                 disabled={item.returnQuantity <= 0}
                               >
                                 <Minus className="h-3 w-3" />
@@ -708,8 +778,9 @@ export const OrderDetailsModal = ({ open, onOpenChange, order, onOrderUpdated }:
                                 type="number"
                                 min="0"
                                 max={item.originalQuantity}
+                                step="0.1"
                                 value={item.returnQuantity}
-                                onChange={(e) => updateReturnQuantity(index, parseInt(e.target.value) || 0)}
+                                onChange={(e) => updateReturnQuantity(index, parseFloat(e.target.value) || 0)}
                                 className="w-20 text-center"
                               />
                               <Button
@@ -717,7 +788,7 @@ export const OrderDetailsModal = ({ open, onOpenChange, order, onOrderUpdated }:
                                 variant="outline"
                                 size="sm"
                                 className="h-8 w-8 p-0"
-                                onClick={() => updateReturnQuantity(index, item.returnQuantity + 1)}
+                                onClick={() => updateReturnQuantity(index, item.returnQuantity + 0.1)}
                                 disabled={item.returnQuantity >= item.originalQuantity}
                               >
                                 <Plus className="h-3 w-3" />
@@ -778,7 +849,7 @@ export const OrderDetailsModal = ({ open, onOpenChange, order, onOrderUpdated }:
                           .filter(item => item.returnQuantity > 0)
                           .map((item, index) => (
                             <div key={index} className="flex justify-between text-blue-700">
-                              <span>{item.productName} x {item.returnQuantity}</span>
+                              <span>{item.productName} x {formatQuantity(item.returnQuantity)}</span>
                               <span>PKR {(item.returnQuantity * item.unitPrice).toFixed(2)}</span>
                             </div>
                           ))}

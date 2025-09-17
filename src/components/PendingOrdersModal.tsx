@@ -6,6 +6,7 @@ import { Separator } from "@/components/ui/separator";
 import { Calendar, Package, User, DollarSign, Trash2 } from "lucide-react";
 import { getPendingOrders, removePendingOrder } from "@/data/storeData";
 import { useToast } from "@/hooks/use-toast";
+import { formatQuantity } from "@/lib/utils";
 
 interface PendingOrdersModalProps {
   open: boolean;
@@ -94,7 +95,7 @@ export function PendingOrdersModal({ open, onOpenChange }: PendingOrdersModalPro
                     <div key={index} className="flex justify-between items-center text-sm bg-gray-50 p-2 rounded">
                       <div className="flex-1">
                         <span className="font-medium">{item.productName}</span>
-                        <span className="text-gray-500 ml-2">x {item.quantity}</span>
+                        <span className="text-gray-500 ml-2">x {formatQuantity(item.quantity)}</span>
                       </div>
                       <div className="text-right">
                         <span className="font-medium">PKR {item.total.toLocaleString()}</span>

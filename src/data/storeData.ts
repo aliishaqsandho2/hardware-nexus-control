@@ -1,8 +1,8 @@
 
 // Centralized data for Usman Hardware store - Furniture Hardware Specialist
 
-// Product Units
-export type ProductUnit = "piece" | "pair" | "box" | "kg" | "liter" | "set" | "pack";
+// Product Units - Comprehensive list for furniture hardware store
+export type ProductUnit = "piece" | "pair" | "set" | "pack" | "box" | "dozen" | "meter" | "cm" | "mm" | "inch" | "feet" | "kg" | "gram" | "liter" | "ml" | "sq_ft" | "sq_meter" | "roll" | "sheet" | "bundle" | "coil" | "tube" | "bottle" | "can" | "gallon" | "pound";
 
 // Customer Types
 export type CustomerType = "manufacturer" | "retailer" | "special" | "regular" | "walk-in";
@@ -159,15 +159,45 @@ export const categories = [
   { value: "brackets", label: "Brackets & Supports" },
 ];
 
-// Units for products
+// Units for products - Comprehensive for furniture hardware store
 export const units = [
+  // Count-based units
   { value: "piece", label: "Piece" },
   { value: "pair", label: "Pair" },
-  { value: "box", label: "Box" },
-  { value: "kg", label: "Kilogram" },
-  { value: "liter", label: "Liter" },
   { value: "set", label: "Set" },
   { value: "pack", label: "Pack" },
+  { value: "box", label: "Box" },
+  { value: "dozen", label: "Dozen (12 pieces)" },
+  
+  // Length units
+  { value: "meter", label: "Meter" },
+  { value: "cm", label: "Centimeter" },
+  { value: "mm", label: "Millimeter" },
+  { value: "inch", label: "Inch" },
+  { value: "feet", label: "Feet" },
+  
+  // Weight units
+  { value: "kg", label: "Kilogram" },
+  { value: "gram", label: "Gram" },
+  { value: "pound", label: "Pound" },
+  
+  // Volume/Liquid units
+  { value: "liter", label: "Liter" },
+  { value: "ml", label: "Milliliter" },
+  { value: "gallon", label: "Gallon" },
+  { value: "bottle", label: "Bottle" },
+  { value: "can", label: "Can" },
+  
+  // Area units
+  { value: "sq_ft", label: "Square Feet" },
+  { value: "sq_meter", label: "Square Meter" },
+  { value: "sheet", label: "Sheet" },
+  
+  // Material units
+  { value: "roll", label: "Roll" },
+  { value: "bundle", label: "Bundle" },
+  { value: "coil", label: "Coil" },
+  { value: "tube", label: "Tube" },
 ];
 
 // Payment Methods

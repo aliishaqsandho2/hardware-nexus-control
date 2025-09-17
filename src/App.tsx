@@ -5,6 +5,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { SidebarProvider } from "@/components/ui/sidebar";
 import { ThemeProvider } from "@/components/ThemeProvider";
+import { FontProvider } from "@/components/FontProvider";
 import { AppSidebar } from "@/components/AppSidebar";
 import { Header } from "@/components/Header";
 import Dashboard from "./pages/Dashboard";
@@ -26,13 +27,16 @@ import Settings from "./pages/Settings";
 import BackupSync from "./pages/BackupSync";
 import Calendar from "./pages/Calendar";
 import AccountsReceivable from "./pages/AccountsReceivable";
+import OutsourcedOrders from "./pages/OutsourcedOrders";
+import Profit from "./pages/Profit";
 
 const queryClient = new QueryClient();
 
 const App = () => (
   <QueryClientProvider client={queryClient}>
     <ThemeProvider defaultTheme="system" storageKey="hardware-store-theme">
-      <TooltipProvider>
+      <FontProvider defaultFont="inter" storageKey="hardware-store-font">
+        <TooltipProvider>
         <Toaster />
         <Sonner />
         <BrowserRouter>
@@ -44,9 +48,11 @@ const App = () => (
                 <main className="flex-1 overflow-auto custom-scrollbar">
                   <Routes>
                     <Route path="/" element={<Dashboard />} />
+                    <Route path="/profit" element={<Profit />} />
                     <Route path="/products" element={<Products />} />
                     <Route path="/sales" element={<Sales />} />
                     <Route path="/orders" element={<Orders />} />
+                    <Route path="/outsourced-orders" element={<OutsourcedOrders />} />
                     <Route path="/customers" element={<Customers />} />
                     
                     <Route path="/suppliers" element={<Suppliers />} />
@@ -68,7 +74,8 @@ const App = () => (
             </div>
           </SidebarProvider>
         </BrowserRouter>
-      </TooltipProvider>
+        </TooltipProvider>
+      </FontProvider>
     </ThemeProvider>
   </QueryClientProvider>
 );

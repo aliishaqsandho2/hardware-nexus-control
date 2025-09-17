@@ -1,5 +1,5 @@
 
-const BASE_URL = 'https://usmanhardware.site/wp-json/ims/v1';
+import { apiConfig } from '@/utils/apiConfig';
 
 export interface CalendarEvent {
   id: number;
@@ -26,7 +26,7 @@ const apiRequest = async <T>(
   endpoint: string,
   options: RequestInit = {}
 ): Promise<T> => {
-  const url = `${BASE_URL}${endpoint}`;
+  const url = `${apiConfig.getBaseUrl()}${endpoint}`;
 
   try {
     const response = await fetch(url, {

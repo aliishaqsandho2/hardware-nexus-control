@@ -31,6 +31,7 @@ import {
   Smartphone
 } from "lucide-react";
 import { useIsMobile } from "@/hooks/use-mobile";
+import { apiConfig } from "@/utils/apiConfig";
 
 interface DashboardStats {
   financial: {
@@ -97,7 +98,7 @@ const Index = () => {
   const { data: dashboardData, isLoading, error } = useQuery({
     queryKey: ['dashboard-stats'],
     queryFn: async () => {
-      const response = await fetch('https://usmanhardware.site/wp-json/ims/v1/dashboard/enhanced-stats');
+      const response = await fetch(`${apiConfig.getBaseUrl()}/dashboard/enhanced-stats`);
       if (!response.ok) throw new Error('Failed to fetch stats');
       return response.json();
     },

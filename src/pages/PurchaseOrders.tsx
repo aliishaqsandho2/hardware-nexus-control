@@ -10,7 +10,7 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
-import { FileText, Search, Plus, Calendar, Truck, DollarSign, User, Package, CheckCircle, Clock, XCircle, Loader2, Eye, Edit, Trash2, Send, PackageCheck } from "lucide-react";
+import { FileText, Search, Plus, Calendar, Truck, DollarSign, User, Package, CheckCircle, Clock, XCircle, Loader2, Eye, Edit, Trash2, Send, PackageCheck, Info } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { purchaseOrdersApi, suppliersApi, productsApi } from "@/services/api";
@@ -30,7 +30,14 @@ import {
   PaginationNext, 
   PaginationPrevious 
 } from "@/components/ui/pagination";
-import { EnhancedPurchaseOrderForm } from "@/components/purchase-orders/EnhancedPurchaseOrderForm";
+import { 
+  Tooltip, 
+  TooltipContent, 
+  TooltipProvider, 
+  TooltipTrigger 
+} from "@/components/ui/tooltip";
+import { SinglePurchaseOrderForm } from "@/components/purchase-orders/SinglePurchaseOrderForm";
+import { apiConfig } from "@/utils/apiConfig";
 
 const PurchaseOrders = () => {
   const { toast } = useToast();
@@ -81,17 +88,42 @@ const PurchaseOrders = () => {
 
   // Update status mutation
   const updateStatusMutation = useMutation({
-    mutationFn: ({ id, status, notes }: { id: number, status: string, notes?: string }) => 
-      purchaseOrdersApi.updateStatus(id, status, notes),
+    mutationFn: async ({ id, status, notes }: { id: number, status: string, notes?: string }) => {
+      // If status is "received", use the receive endpoint
+      if (status === "received") {
+        const order = orders.find((o: any) => o.id === id);
+        if (!order || !order.items) {
+          throw new Error("Order or order items not found");
+        }
+        
+        // Use the receive API with proper format
+        const receiveData = {
+          items: order.items.map((item: any) => ({
+            productId: item.productId,
+            quantityReceived: item.quantity,
+            condition: "good"
+          })),
+          notes: notes || "All items received in good condition"
+        };
+        
+        return await purchaseOrdersApi.receive(id, receiveData);
+      } else {
+        // For other status updates, use the regular updateStatus method
+        return await purchaseOrdersApi.updateStatus(id, status, notes);
+      }
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['purchase-orders'] });
+      queryClient.invalidateQueries({ queryKey: ['inventory'] }); // Refresh inventory data
       setStatusUpdateOrder(null);
       setNewStatus("");
       setStatusNotes("");
       setIsStatusDialogOpen(false);
       toast({
         title: "Status Updated",
-        description: "Purchase order status has been updated successfully",
+        description: newStatus === "received" 
+          ? "Purchase order marked as received and inventory updated successfully"
+          : "Purchase order status has been updated successfully",
       });
     },
     onError: (error: any) => {
@@ -145,12 +177,12 @@ const PurchaseOrders = () => {
 
   const getStatusColor = (status: string) => {
     switch (status) {
-      case "draft": return "bg-gray-100 text-gray-800 border-gray-300";
-      case "sent": return "bg-blue-100 text-blue-800 border-blue-300";
-      case "confirmed": return "bg-yellow-100 text-yellow-800 border-yellow-300";
-      case "received": return "bg-green-100 text-green-800 border-green-300";
-      case "cancelled": return "bg-red-100 text-red-800 border-red-300";
-      default: return "bg-gray-100 text-gray-800 border-gray-300";
+      case "draft": return "bg-muted text-muted-foreground border-border";
+      case "sent": return "bg-blue-50 text-blue-700 border-blue-200 dark:bg-blue-900/20 dark:text-blue-300 dark:border-blue-800";
+      case "confirmed": return "bg-yellow-50 text-yellow-700 border-yellow-200 dark:bg-yellow-900/20 dark:text-yellow-300 dark:border-yellow-800";
+      case "received": return "bg-green-50 text-green-700 border-green-200 dark:bg-green-900/20 dark:text-green-300 dark:border-green-800";
+      case "cancelled": return "bg-red-50 text-red-700 border-red-200 dark:bg-red-900/20 dark:text-red-300 dark:border-red-800";
+      default: return "bg-muted text-muted-foreground border-border";
     }
   };
 
@@ -170,15 +202,21 @@ const PurchaseOrders = () => {
       case "draft":
         return [
           { value: "sent", label: "Send to Supplier" },
+          { value: "confirmed", label: "Mark as Confirmed" },
+          { value: "received", label: "Mark as Received" },
           { value: "cancelled", label: "Cancel Order" }
         ];
       case "sent":
         return [
+          { value: "sent", label: "Send to Supplier" },
           { value: "confirmed", label: "Mark as Confirmed" },
+          { value: "received", label: "Mark as Received" },
           { value: "cancelled", label: "Cancel Order" }
         ];
       case "confirmed":
         return [
+          { value: "sent", label: "Send to Supplier" },
+          { value: "confirmed", label: "Mark as Confirmed" },
           { value: "received", label: "Mark as Received" },
           { value: "cancelled", label: "Cancel Order" }
         ];
@@ -239,22 +277,19 @@ const PurchaseOrders = () => {
         <div className="flex items-center gap-4">
 
           <div>
-            <h1 className="text-3xl font-bold text-gray-500">Purchase Orders</h1>
-            <p className="text-gray-400">Manage purchase orders and supplier transactions</p>
+            <h1 className="text-3xl font-bold text-foreground">Purchase Orders</h1>
+            <p className="text-muted-foreground">Manage purchase orders and supplier transactions</p>
           </div>
         </div>
         <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
           <DialogTrigger asChild>
-            <Button className="bg-gray-800 hover:bg-gray-900 text-white">
+            <Button className="bg-primary hover:bg-primary/90 text-primary-foreground">
               <Plus className="h-4 w-4 mr-2" />
               New Purchase Order
             </Button>
           </DialogTrigger>
-          <DialogContent className="max-w-6xl max-h-[90vh] overflow-y-auto p-0">
-            <DialogHeader className="p-6 pb-0">
-              <DialogTitle>Create New Purchase Order</DialogTitle>
-            </DialogHeader>
-            <EnhancedPurchaseOrderForm 
+          <DialogContent className="max-w-7xl max-h-[95vh] overflow-hidden p-0">
+            <SinglePurchaseOrderForm 
               onSubmit={handleCreateOrder} 
               onClose={() => setIsCreateDialogOpen(false)}
               isLoading={createOrderMutation.isPending}
@@ -265,61 +300,61 @@ const PurchaseOrders = () => {
 
       {/* Stats Cards */}
       <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
-        <Card className="border-gray-200">
+        <Card className="border-border">
           <CardContent className="p-4">
             <div className="flex items-center gap-2">
-              <FileText className="h-5 w-5 text-gray-700" />
+              <FileText className="h-5 w-5 text-muted-foreground" />
               <div>
-                <p className="text-sm text-gray-500">Total Orders</p>
-                <p className="text-xl font-bold text-gray-100">{statsData.total}</p>
+                <p className="text-sm text-muted-foreground">Total Orders</p>
+                <p className="text-xl font-bold text-foreground">{statsData.total}</p>
               </div>
             </div>
           </CardContent>
         </Card>
 
-        <Card className="border-blue-200">
+        <Card className="border-blue-200 dark:border-blue-800">
           <CardContent className="p-4">
             <div className="flex items-center gap-2">
-              <Clock className="h-5 w-5 text-blue-600" />
+              <Clock className="h-5 w-5 text-blue-600 dark:text-blue-400" />
               <div>
-                <p className="text-sm text-gray-500">Draft</p>
-                <p className="text-xl font-bold text-blue-600">{statsData.draft}</p>
+                <p className="text-sm text-muted-foreground">Draft</p>
+                <p className="text-xl font-bold text-blue-600 dark:text-blue-400">{statsData.draft}</p>
               </div>
             </div>
           </CardContent>
         </Card>
 
-        <Card className="border-yellow-200">
+        <Card className="border-yellow-200 dark:border-yellow-800">
           <CardContent className="p-4">
             <div className="flex items-center gap-2">
-              <CheckCircle className="h-5 w-5 text-yellow-600" />
+              <CheckCircle className="h-5 w-5 text-yellow-600 dark:text-yellow-400" />
               <div>
-                <p className="text-sm text-gray-500">Confirmed</p>
-                <p className="text-xl font-bold text-yellow-600">{statsData.confirmed}</p>
+                <p className="text-sm text-muted-foreground">Confirmed</p>
+                <p className="text-xl font-bold text-yellow-600 dark:text-yellow-400">{statsData.confirmed}</p>
               </div>
             </div>
           </CardContent>
         </Card>
 
-        <Card className="border-green-200">
+        <Card className="border-green-200 dark:border-green-800">
           <CardContent className="p-4">
             <div className="flex items-center gap-2">
-              <Package className="h-5 w-5 text-green-600" />
+              <Package className="h-5 w-5 text-green-600 dark:text-green-400" />
               <div>
-                <p className="text-sm text-gray-500">Received</p>
-                <p className="text-xl font-bold text-green-600">{statsData.received}</p>
+                <p className="text-sm text-muted-foreground">Received</p>
+                <p className="text-xl font-bold text-green-600 dark:text-green-400">{statsData.received}</p>
               </div>
             </div>
           </CardContent>
         </Card>
 
-        <Card className="border-gray-200">
+        <Card className="border-border">
           <CardContent className="p-4">
             <div className="flex items-center gap-2">
-              <DollarSign className="h-5 w-5 text-gray-700" />
+              <DollarSign className="h-5 w-5 text-muted-foreground" />
               <div>
-                <p className="text-sm text-gray-500">Total Value</p>
-                <p className="text-xl font-bold text-gray-100">Rs. {statsData.totalValue.toLocaleString()}</p>
+                <p className="text-sm text-muted-foreground">Total Value</p>
+                <p className="text-xl font-bold text-foreground">Rs. {statsData.totalValue.toLocaleString()}</p>
               </div>
             </div>
           </CardContent>
@@ -329,19 +364,19 @@ const PurchaseOrders = () => {
       {/* Filters */}
       <div className="flex flex-col sm:flex-row gap-4">
         <div className="relative flex-1">
-          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
+          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
           <Input
             placeholder="Search by order ID or supplier..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            className="pl-10 border-gray-300 focus:border-gray-500"
+            className="pl-10"
           />
         </div>
         <Select value={filterStatus} onValueChange={(value) => {
           setFilterStatus(value);
           setCurrentPage(1);
         }}>
-          <SelectTrigger className="w-full sm:w-48 border-gray-300 focus:border-gray-500">
+          <SelectTrigger className="w-full sm:w-48">
             <SelectValue placeholder="Filter by status" />
           </SelectTrigger>
           <SelectContent>
@@ -365,6 +400,7 @@ const PurchaseOrders = () => {
                 <TableHead>Supplier</TableHead>
                 <TableHead>Date</TableHead>
                 <TableHead>Expected Delivery</TableHead>
+                <TableHead>Items</TableHead>
                 <TableHead>Status</TableHead>
                 <TableHead>Total Amount</TableHead>
                 <TableHead>Actions</TableHead>
@@ -378,6 +414,51 @@ const PurchaseOrders = () => {
                   <TableCell>{new Date(order.date).toLocaleDateString()}</TableCell>
                   <TableCell>
                     {order.expectedDelivery ? new Date(order.expectedDelivery).toLocaleDateString() : 'Not set'}
+                  </TableCell>
+                  <TableCell>
+                    <TooltipProvider>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
+                            <Info className="h-4 w-4 text-primary" />
+                          </Button>
+                        </TooltipTrigger>
+                        <TooltipContent side="top" className="max-w-sm p-4">
+                          <div className="space-y-3">
+                            <div className="text-sm font-semibold text-foreground border-b border-border pb-2">
+                              Order Items ({order.items?.length || 0})
+                            </div>
+                            <div className="max-h-40 overflow-y-auto space-y-2">
+                              {order.items?.map((item: any, index: number) => (
+                                <div key={index} className="flex justify-between items-start gap-3 text-xs">
+                                  <div className="flex-1 min-w-0">
+                                    <div className="font-medium text-foreground truncate">
+                                      {item.productName || item.name}
+                                    </div>
+                                    <div className="text-muted-foreground">
+                                      Qty: {item.quantity} × Rs. {item.unitPrice?.toLocaleString()}
+                                    </div>
+                                  </div>
+                                  <div className="text-right font-medium text-foreground">
+                                    Rs. {(item.quantity * item.unitPrice)?.toLocaleString()}
+                                  </div>
+                                </div>
+                              )) || (
+                                <div className="text-xs text-muted-foreground">No items found</div>
+                              )}
+                            </div>
+                            {order.items?.length > 0 && (
+                              <div className="pt-2 border-t border-border">
+                                <div className="flex justify-between text-sm font-semibold text-foreground">
+                                  <span>Total:</span>
+                                  <span>Rs. {order.total?.toLocaleString()}</span>
+                                </div>
+                              </div>
+                            )}
+                          </div>
+                        </TooltipContent>
+                      </Tooltip>
+                    </TooltipProvider>
                   </TableCell>
                   <TableCell>
                     <Badge className={getStatusColor(order.status)}>

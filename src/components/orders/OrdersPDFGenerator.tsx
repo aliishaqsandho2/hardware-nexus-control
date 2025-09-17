@@ -382,9 +382,10 @@ export const useOrderPDFGenerator = () => {
       });
     } catch (error) {
       console.error('Failed to generate receipt:', error);
+      const errorMessage = error instanceof Error ? error.message : "Failed to generate thermal receipt. Please try again.";
       toast({
         title: "Receipt Generation Failed",
-        description: "Failed to generate thermal receipt. Please try again.",
+        description: errorMessage,
         variant: "destructive"
       });
     }

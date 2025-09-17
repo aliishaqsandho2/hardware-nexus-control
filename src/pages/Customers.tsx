@@ -10,18 +10,18 @@ import { Textarea } from "@/components/ui/textarea";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Separator } from "@/components/ui/separator";
-import { Users, Search, Plus, Edit, CreditCard, Phone, MapPin, Calendar, Mail, Building, IdCard, Receipt, History, AlertCircle, Banknote, RefreshCw, Download } from "lucide-react";
+import { Users, Search, Plus, Edit, CreditCard, Phone, MapPin, Calendar, Mail, Building, IdCard, Receipt, History, AlertCircle, Banknote, Download } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { customersApi } from "@/services/api";
 import { CustomerEditModal } from "@/components/customers/CustomerEditModal";
-import { useCustomerBalance } from "@/hooks/useCustomerBalance";
-import { CustomerCards } from "@/components/customers/CustomerCards";
+
+import { CustomersList } from "@/components/customers/CustomersList";
 import { CustomersPagination } from "@/components/customers/CustomersPagination";
 import { generateAllCustomersPDF } from "@/utils/allCustomersPdfGenerator";
 
 const Customers = () => {
   const { toast } = useToast();
-  const { syncAllCustomerBalances } = useCustomerBalance();
+  
   const [searchTerm, setSearchTerm] = useState("");
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [selectedCustomer, setSelectedCustomer] = useState<any>(null);
@@ -29,12 +29,12 @@ const Customers = () => {
   const [customers, setCustomers] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [customersLoading, setCustomersLoading] = useState(false);
-  const [syncing, setSyncing] = useState(false);
+  
   const [pagination, setPagination] = useState({
     currentPage: 1,
     totalPages: 1,
     totalItems: 0,
-    itemsPerPage: 20
+    itemsPerPage: 50
   });
 
   // States for customer edit modal
@@ -56,7 +56,7 @@ const Customers = () => {
       setCustomersLoading(true);
       const params: any = {
         page,
-        limit: 20,
+        limit: 50,
         status: 'active',
         includeHistoricalData: true,
         allTime: true
@@ -85,7 +85,7 @@ const Customers = () => {
             currentPage: 1,
             totalPages: 1,
             totalItems: customersArray.length,
-            itemsPerPage: 20
+            itemsPerPage: 50
           });
         }
       } else {
@@ -138,18 +138,6 @@ const Customers = () => {
     fetchCustomers(page, searchTerm, customerTypeFilter);
   };
 
-  // Handle manual balance sync
-  const handleSyncBalances = async () => {
-    try {
-      setSyncing(true);
-      await syncAllCustomerBalances();
-      await fetchCustomers(pagination.currentPage);
-    } catch (error) {
-      console.error('Failed to sync balances:', error);
-    } finally {
-      setSyncing(false);
-    }
-  };
 
   const handleAddCustomer = async (formData: any) => {
     try {
@@ -254,20 +242,51 @@ const Customers = () => {
         return;
       }
 
-      console.log('Exporting all customers:', customers.length);
-      generateAllCustomersPDF(customers);
+      console.log('Preparing to export ALL customers from API...');
+
+      // Fetch ALL customers across all pages (ignore current pagination)
+      const pageSize = 200; // higher page size to reduce requests
+      let page = 1;
+      let totalPages = 1;
+      const allCustomers: any[] = [];
+
+      do {
+        const resp = await customersApi.getAll({ page, limit: pageSize });
+        if (!resp.success) throw new Error(resp.message || 'Failed to fetch customers');
+
+        const batch = resp.data?.customers || resp.data || [];
+        const pag = resp.data?.pagination;
+        if (Array.isArray(batch)) allCustomers.push(...batch);
+        if (pag) {
+          totalPages = pag.totalPages || 1;
+        } else {
+          // If no pagination info, assume everything returned in one go
+          totalPages = 1;
+        }
+
+        console.log(`Fetched page ${page}/${totalPages}: +${batch.length} customers`);
+        page += 1;
+      } while (page <= totalPages);
+
+      if (allCustomers.length === 0) {
+        toast({ title: 'No Data', description: 'No customers available to export.', variant: 'destructive' });
+        return;
+      }
+
+      console.log('Exporting all customers:', allCustomers.length);
+      generateAllCustomersPDF(allCustomers);
       
       toast({
-        title: "Export Successful",
-        description: `All customers report has been downloaded with ${customers.length} customers.`,
+        title: 'Export Successful',
+        description: `All customers report has been downloaded with ${allCustomers.length} customers.`,
       });
       
     } catch (error) {
       console.error('Failed to export all customers:', error);
       toast({
-        title: "Export Failed",
-        description: "Failed to generate the customers report.",
-        variant: "destructive"
+        title: 'Export Failed',
+        description: 'Failed to generate the customers report.',
+        variant: 'destructive'
       });
     }
   };
@@ -290,15 +309,6 @@ const Customers = () => {
           >
             <Download className="h-4 w-4 mr-2" />
             Export All Customers
-          </Button>
-          <Button 
-            variant="outline" 
-            onClick={handleSyncBalances}
-            disabled={syncing}
-            className="bg-orange-50 hover:bg-orange-100 text-orange-600 border-orange-200 w-full sm:w-auto"
-          >
-            <RefreshCw className={`h-4 w-4 mr-2 ${syncing ? 'animate-spin' : ''}`} />
-            {syncing ? 'Syncing...' : 'Sync Balances'}
           </Button>
           <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
             <DialogTrigger asChild>
@@ -392,8 +402,8 @@ const Customers = () => {
         </CardContent>
       </Card>
 
-      {/* Customers Grid */}
-      <CustomerCards
+      {/* Customers List */}
+      <CustomersList
         customers={customers}
         loading={customersLoading}
         onSelectCustomer={setSelectedCustomer}

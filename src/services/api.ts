@@ -1,4 +1,4 @@
-const BASE_URL = 'https://usmanhardware.site/wp-json/ims/v1';
+import { apiConfig } from '@/utils/apiConfig';
 
 // API response types
 export interface ApiResponse<T> {
@@ -118,7 +118,7 @@ const apiRequest = async <T>(
   endpoint: string,
   options: RequestInit = {}
 ): Promise<T> => {
-  const url = `${BASE_URL}${endpoint}`;
+  const url = `${apiConfig.getBaseUrl()}${endpoint}`;
 
   try {
     const response = await fetch(url, {
@@ -130,14 +130,70 @@ const apiRequest = async <T>(
     });
 
     if (!response.ok) {
-      throw new Error(`HTTP error! status: ${response.status}`);
+      // Try to extract error message from response body
+      let errorMessage = `HTTP error! status: ${response.status}`;
+      try {
+        const contentType = response.headers.get('content-type');
+        if (contentType && contentType.includes('application/json')) {
+          const errorData = await response.json();
+          if (errorData.message) {
+            errorMessage = errorData.message;
+          } else if (errorData.error) {
+            errorMessage = errorData.error;
+          } else if (typeof errorData === 'string') {
+            errorMessage = errorData;
+          }
+        } else {
+          // If response is not JSON (likely HTML error page), provide a user-friendly message
+          const textResponse = await response.text();
+          if (textResponse.includes('404') || response.status === 404) {
+            errorMessage = 'The requested resource was not found';
+          } else if (textResponse.includes('500') || response.status === 500) {
+            errorMessage = 'Internal server error occurred';
+          } else if (response.status === 403) {
+            errorMessage = 'Access denied - insufficient permissions';
+          } else if (response.status === 400) {
+            errorMessage = 'Invalid request - please check your input';
+          } else {
+            errorMessage = response.statusText || `Server error (${response.status})`;
+          }
+        }
+      } catch (parseError) {
+        // If we can't parse the error response, use the status text
+        errorMessage = response.statusText || errorMessage;
+      }
+      throw new Error(errorMessage);
     }
 
-    const data = await response.json();
-    return data;
+    try {
+      const data = await response.json();
+      return data;
+    } catch (jsonError) {
+      // Handle mixed HTML/JSON responses (WordPress database errors followed by JSON)
+      try {
+        const textResponse = await response.text();
+        
+        // Look for JSON in the response text
+        const jsonMatch = textResponse.match(/\{.*\}$/);
+        if (jsonMatch) {
+          const jsonData = JSON.parse(jsonMatch[0]);
+          return jsonData;
+        }
+        
+        // If no JSON found, throw original error
+        throw new Error('Server returned invalid response format');
+      } catch (fallbackError) {
+        throw new Error('Server returned invalid response format');
+      }
+    }
   } catch (error) {
     console.error('API request failed:', error);
-    throw error;
+    // Ensure we always throw an Error object with a meaningful message
+    if (error instanceof Error) {
+      throw error;
+    } else {
+      throw new Error('Network request failed');
+    }
   }
 };
 
@@ -530,4 +586,135 @@ export const quotationsApi = {
     apiRequest<ApiResponse<any>>(`/quotations/${id}/convert-to-sale`, {
       method: 'PUT',
     }),
+};
+
+// Outsourcing API Types
+export interface OutsourcingOrder {
+  id: number;
+  sale_id: number;
+  sale_item_id: number;
+  product_id: number;
+  supplier_id: number;
+  quantity: number;
+  cost_per_unit: number;
+  total_cost: number;
+  notes?: string;
+  status: 'pending' | 'ordered' | 'delivered';
+  created_at: string;
+  updated_at: string;
+  // Populated fields
+  product_name?: string;
+  supplier_name?: string;
+}
+
+// Outsourcing API
+export const outsourcingApi = {
+  /**
+   * GET /outsourcing - List all outsourcing orders
+   * 
+   * @param params Query parameters
+   * @param params.page Page number (default: 1)
+   * @param params.limit Items per page (default: 10)
+   * @param params.status Filter by status: 'pending', 'ordered', 'delivered'
+   * @param params.supplier_id Filter by supplier ID
+   * @param params.date_from Filter from date (YYYY-MM-DD)
+   * @param params.date_to Filter to date (YYYY-MM-DD)
+   * @param params.search Search in product name or supplier name
+   * 
+   * @returns Promise<ApiResponse<{ orders: OutsourcingOrder[], pagination: PaginationMeta }>>
+   */
+  getAll: (params?: {
+    page?: number;
+    limit?: number;
+    status?: 'pending' | 'ordered' | 'delivered';
+    supplier_id?: number;
+    date_from?: string;
+    date_to?: string;
+    search?: string;
+  }) => {
+    const queryParams = new URLSearchParams();
+    if (params) {
+      Object.entries(params).forEach(([key, value]) => {
+        if (value !== undefined && value !== null && value !== '') {
+          queryParams.append(key, value.toString());
+        }
+      });
+    }
+    const query = queryParams.toString();
+    return apiRequest<ApiResponse<{
+      orders: OutsourcingOrder[];
+      pagination: {
+        current_page: number;
+        total_pages: number;
+        total_items: number;
+        items_per_page: number;
+        has_next_page: boolean;
+        has_previous_page: boolean;
+      };
+    }>>(`/outsourcing${query ? `?${query}` : ''}`);
+  },
+
+  /**
+   * PUT /outsourcing/{id}/status - Update outsourcing order status
+   * 
+   * @param id Outsourcing order ID
+   * @param status New status: 'pending', 'ordered', 'delivered'
+   * @param notes Optional notes for the status update
+   * 
+   * @returns Promise<ApiResponse<OutsourcingOrder>>
+   */
+  updateStatus: (id: number, status: 'pending' | 'ordered' | 'delivered', notes?: string) =>
+    apiRequest<ApiResponse<OutsourcingOrder>>(`/outsourcing/${id}/status`, {
+      method: 'PUT',
+      body: JSON.stringify({ status, notes }),
+    }),
+
+  /**
+   * GET /outsourcing/supplier/{supplierId} - Get outsourcing orders by supplier
+   * 
+   * @param supplierId Supplier ID
+   * @param params Query parameters
+   * @param params.page Page number (default: 1)
+   * @param params.limit Items per page (default: 10)
+   * @param params.status Filter by status: 'pending', 'ordered', 'delivered'
+   * @param params.date_from Filter from date (YYYY-MM-DD)
+   * @param params.date_to Filter to date (YYYY-MM-DD)
+   * 
+   * @returns Promise<ApiResponse<{ orders: OutsourcingOrder[], pagination: PaginationMeta, supplier: Supplier }>>
+   */
+  getBySupplier: (supplierId: number, params?: {
+    page?: number;
+    limit?: number;
+    status?: 'pending' | 'ordered' | 'delivered';
+    date_from?: string;
+    date_to?: string;
+  }) => {
+    const queryParams = new URLSearchParams();
+    if (params) {
+      Object.entries(params).forEach(([key, value]) => {
+        if (value !== undefined && value !== null && value !== '') {
+          queryParams.append(key, value.toString());
+        }
+      });
+    }
+    const query = queryParams.toString();
+    return apiRequest<ApiResponse<{
+      orders: OutsourcingOrder[];
+      pagination: {
+        current_page: number;
+        total_pages: number;
+        total_items: number;
+        items_per_page: number;
+        has_next_page: boolean;
+        has_previous_page: boolean;
+      };
+      supplier: {
+        id: number;
+        name: string;
+        contact_person?: string;
+        phone?: string;
+        email?: string;
+      };
+    }>>(`/outsourcing/supplier/${supplierId}${query ? `?${query}` : ''}`);
+  },
 };

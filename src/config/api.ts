@@ -1,4 +1,8 @@
 
+import { apiConfig } from '@/utils/apiConfig';
+
 export const API_CONFIG = {
-  BASE_URL: 'https://aliishaq.site/wp-json/ims/v1'
+  get BASE_URL() {
+    return apiConfig.getBaseUrl();
+  }
 };

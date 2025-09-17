@@ -11,6 +11,31 @@ import { useToast } from "@/hooks/use-toast";
 import { productsApi } from "@/services/api";
 import { Package, AlertTriangle, RefreshCw } from "lucide-react";
 import { generateSKU } from "@/utils/skuGenerator";
+import { units as predefinedUnits } from "@/data/storeData";
+
+// Units Select Component
+const UnitsSelect = ({ value, onValueChange }: { value: string; onValueChange: (value: string) => void }) => {
+  const [units, setUnits] = useState<any[]>([]);
+
+  useEffect(() => {
+    setUnits(predefinedUnits);
+  }, []);
+
+  return (
+    <Select value={value} onValueChange={onValueChange}>
+      <SelectTrigger className="mt-1">
+        <SelectValue placeholder="Select unit" />
+      </SelectTrigger>
+      <SelectContent>
+        {units.map((unit) => (
+          <SelectItem key={unit.value} value={unit.value}>
+            {unit.label}
+          </SelectItem>
+        ))}
+      </SelectContent>
+    </Select>
+  );
+};
 
 interface QuickProductAddModalProps {
   open: boolean;
@@ -34,7 +59,7 @@ export const QuickProductAddModal: React.FC<QuickProductAddModalProps> = ({
     price: '',
     costPrice: '',
     stock: '',
-    unit: 'pieces',
+    unit: 'piece',
     description: '',
     incompleteQuantity: false,
     quantityNote: ''
@@ -61,7 +86,7 @@ export const QuickProductAddModal: React.FC<QuickProductAddModalProps> = ({
         category: formData.category || 'Uncategorized',
         price: parseFloat(formData.price) || 0,
         stock: formData.incompleteQuantity ? 0 : (parseFloat(formData.stock) || 0),
-        unit: formData.unit || 'pieces',
+        unit: formData.unit || 'piece',
         description: formData.description.trim() || 'N/A',
         status: 'active',
         barcode: 'N/A',
@@ -108,7 +133,7 @@ export const QuickProductAddModal: React.FC<QuickProductAddModalProps> = ({
           price: '',
           costPrice: '',
           stock: '',
-          unit: 'pieces',
+          unit: 'piece',
           description: '',
           incompleteQuantity: false,
           quantityNote: ''
@@ -268,19 +293,10 @@ export const QuickProductAddModal: React.FC<QuickProductAddModalProps> = ({
             </div>
             <div>
               <Label htmlFor="unit" className="text-sm font-medium">Unit</Label>
-              <Select value={formData.unit} onValueChange={(value) => handleInputChange('unit', value)}>
-                <SelectTrigger className="mt-1">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="pieces">Pieces</SelectItem>
-                  <SelectItem value="kg">Kg</SelectItem>
-                  <SelectItem value="meter">Meter</SelectItem>
-                  <SelectItem value="liter">Liter</SelectItem>
-                  <SelectItem value="box">Box</SelectItem>
-                  <SelectItem value="packet">Packet</SelectItem>
-                </SelectContent>
-              </Select>
+              <UnitsSelect 
+                value={formData.unit}
+                onValueChange={(value) => handleInputChange('unit', value)}
+              />
             </div>
           </div>
 

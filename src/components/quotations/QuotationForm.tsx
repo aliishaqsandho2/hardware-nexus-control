@@ -221,6 +221,7 @@ export default function QuotationForm({ quotation, onSubmit, onCancel, isLoading
                   <Label>Quantity *</Label>
                   <Input
                     type="number"
+                    step="0.01"
                     min="1"
                     className="h-[50px]"
                     {...form.register(`items.${index}.quantity`, { valueAsNumber: true })}

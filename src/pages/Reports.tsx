@@ -28,8 +28,9 @@ import {
   Speaker
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { apiConfig } from "@/utils/apiConfig";
 
-const GEMINI_API_KEY = "AIzaSyDscgxHRLCy4suVBigT1g_pXMnE7tH_Ejw";
+const GEMINI_API_KEY = "AIzaSyCa4pclqzhR4PaUyr81irTxp1rPQzEK3IU";
 const GEMINI_API_URL = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent";
 
 interface Message {
@@ -114,7 +115,7 @@ const Reports = () => {
   const { data: enhancedStats, isLoading: statsLoading } = useQuery({
     queryKey: ['enhanced-stats'],
     queryFn: async () => {
-      const response = await fetch('https://usmanhardware.site/wp-json/ims/v1/dashboard/enhanced-stats');
+      const response = await fetch(`${apiConfig.getBaseUrl()}/dashboard/enhanced-stats`);
       if (!response.ok) throw new Error('Failed to fetch stats');
       return response.json();
     },

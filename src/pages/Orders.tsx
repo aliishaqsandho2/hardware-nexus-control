@@ -9,7 +9,7 @@ import { OrdersSummaryCards } from "@/components/orders/OrdersSummaryCards";
 import { OrdersFilters } from "@/components/orders/OrdersFilters";
 import { OrdersTable } from "@/components/orders/OrdersTable";
 import { useOrderPDFGenerator } from "@/components/orders/OrdersPDFGenerator";
-import jsPDF from 'jspdf';
+import { generateOrdersReportPDF } from "@/utils/ordersReportPdfGenerator";
 
 interface Sale {
   id: number;
@@ -119,9 +119,10 @@ const Orders = () => {
       }
     } catch (error) {
       console.error('Error fetching orders:', error);
+      const errorMessage = error instanceof Error ? error.message : "Failed to load orders data";
       toast({
         title: "Error",
-        description: "Failed to load orders data",
+        description: errorMessage,
         variant: "destructive",
       });
     } finally {
@@ -185,26 +186,42 @@ const Orders = () => {
 
       // Add time filtering
       const now = new Date();
+      let filterText = 'Filters Applied: ';
+      
+      if (options.customerScope === 'single') {
+        filterText += 'Single Customer | ';
+      } else if (options.customerScope === 'multiple') {
+        filterText += `${options.selectedCustomers.length} Selected Customers | `;
+      } else {
+        filterText += 'All Customers | ';
+      }
+      
       switch (options.timeScope) {
         case 'today':
           params.dateFrom = now.toISOString().split('T')[0];
           params.dateTo = now.toISOString().split('T')[0];
+          filterText += 'Today Only';
           break;
         case 'weekly':
           const weekStart = new Date(now);
           weekStart.setDate(now.getDate() - now.getDay());
           params.dateFrom = weekStart.toISOString().split('T')[0];
           params.dateTo = new Date().toISOString().split('T')[0];
+          filterText += 'This Week';
           break;
         case 'monthly':
           const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
           params.dateFrom = monthStart.toISOString().split('T')[0];
           params.dateTo = new Date().toISOString().split('T')[0];
+          filterText += 'This Month';
           break;
         case 'custom':
           if (options.startDate) params.dateFrom = options.startDate;
           if (options.endDate) params.dateTo = options.endDate;
+          filterText += `${options.startDate} to ${options.endDate}`;
           break;
+        default:
+          filterText += 'All Time Period';
       }
 
       // Fetch filtered orders
@@ -213,114 +230,23 @@ const Orders = () => {
       if (response.success) {
         const filteredOrders = response.data.sales || response.data || [];
         
-        // Create PDF
-        const pdf = new jsPDF();
-        const pageWidth = pdf.internal.pageSize.width;
-        const pageHeight = pdf.internal.pageSize.height;
-        const margin = 20;
-        let yPos = margin;
-
-        // Title
-        pdf.setFontSize(20);
-        pdf.setFont('helvetica', 'bold');
-        pdf.text('Orders Export Report', pageWidth / 2, yPos, { align: 'center' });
-        yPos += 15;
-
-        // Export info
-        pdf.setFontSize(10);
-        pdf.setFont('helvetica', 'normal');
-        pdf.text(`Export Date: ${new Date().toLocaleString()}`, margin, yPos);
-        yPos += 8;
-        
-        // Add filter information
-        let filterText = '';
-        if (options.customerScope === 'single') {
-          filterText += 'Single Customer | ';
-        } else if (options.customerScope === 'multiple') {
-          filterText += `${options.selectedCustomers.length} Customers | `;
-        } else {
-          filterText += 'All Customers | ';
-        }
-        
-        switch (options.timeScope) {
-          case 'today':
-            filterText += 'Today';
-            break;
-          case 'weekly':
-            filterText += 'This Week';
-            break;
-          case 'monthly':
-            filterText += 'This Month';
-            break;
-          case 'custom':
-            filterText += `${options.startDate} to ${options.endDate}`;
-            break;
-          default:
-            filterText += 'All Time';
-        }
-        
-        pdf.text(`Filters: ${filterText}`, margin, yPos);
-        yPos += 8;
-        pdf.text(`Total Orders: ${filteredOrders.length}`, margin, yPos);
-        yPos += 8;
-
-        // Calculate total sales
+        // Calculate summary data
         const totalSales = filteredOrders.reduce((sum: number, order: Sale) => sum + (order.subtotal - order.discount), 0);
-        pdf.text(`Total Sales: PKR ${totalSales.toLocaleString()}`, margin, yPos);
-        yPos += 15;
+        const totalItems = filteredOrders.reduce((sum: number, order: Sale) => sum + order.items.reduce((itemSum, item) => itemSum + item.quantity, 0), 0);
+        const avgOrderValue = filteredOrders.length > 0 ? totalSales / filteredOrders.length : 0;
 
-        // Table headers
-        pdf.setFontSize(8);
-        pdf.setFont('helvetica', 'bold');
-        const headers = ['Order #', 'Customer', 'Date', 'Items', 'Total', 'Status'];
-        const colWidths = [25, 35, 25, 15, 30, 20];
-        let xPos = margin;
-
-        headers.forEach((header, index) => {
-          pdf.text(header, xPos, yPos);
-          xPos += colWidths[index];
-        });
-        yPos += 8;
-
-        // Draw line under headers
-        pdf.line(margin, yPos - 2, pageWidth - margin, yPos - 2);
-        yPos += 3;
-
-        // Table data
-        pdf.setFont('helvetica', 'normal');
-        filteredOrders.forEach((order: Sale) => {
-          // Check if we need a new page
-          if (yPos > pageHeight - 30) {
-            pdf.addPage();
-            yPos = margin;
-          }
-
-          xPos = margin;
-          const finalTotal = order.subtotal - order.discount;
-          const rowData = [
-            order.orderNumber.substring(0, 12),
-            (order.customerName || 'Walk-in').substring(0, 18),
-            new Date(order.date).toLocaleDateString('en-GB'),
-            order.items.length.toString(),
-            finalTotal.toLocaleString(),
-            order.status
-          ];
-
-          rowData.forEach((data, index) => {
-            pdf.text(data, xPos, yPos);
-            xPos += colWidths[index];
-          });
-          yPos += 6;
-        });
-
-        // Footer
-        yPos = pageHeight - 20;
-        pdf.setFontSize(8);
-        pdf.text(`Generated by Order Management System`, pageWidth / 2, yPos, { align: 'center' });
-
-        // Save PDF
-        const filename = `orders_export_${options.timeScope}_${new Date().toISOString().split('T')[0]}.pdf`;
-        pdf.save(filename);
+        // Build report payload and generate PDF
+        const reportData = {
+          title: 'ORDERS EXPORT REPORT',
+          orders: filteredOrders,
+          exportDate: new Date().toLocaleString(),
+          totalOrders: filteredOrders.length,
+          totalSales: totalSales,
+          totalItems: totalItems,
+          avgOrderValue: avgOrderValue,
+          filters: filterText
+        };
+        const filename = await generateOrdersReportPDF(reportData);
 
         toast({
           title: "PDF Export Successful",
@@ -329,9 +255,10 @@ const Orders = () => {
       }
     } catch (error) {
       console.error('Failed to export orders to PDF:', error);
+      const errorMessage = error instanceof Error ? error.message : "Failed to export orders data to PDF. Please try again.";
       toast({
         title: "PDF Export Failed",
-        description: "Failed to export orders data to PDF. Please try again.",
+        description: errorMessage,
         variant: "destructive"
       });
     } finally {

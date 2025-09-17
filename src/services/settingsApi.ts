@@ -1,4 +1,4 @@
-const BASE_URL = 'https://aliishaq.site/wp-json/ims/v1';
+import { apiConfig } from '@/utils/apiConfig';
 
 export interface SettingsData {
   profile: {
@@ -39,7 +39,7 @@ const apiRequest = async <T>(
   endpoint: string,
   options: RequestInit = {}
 ): Promise<T> => {
-  const url = `${BASE_URL}${endpoint}`;
+  const url = `${apiConfig.getBaseUrl()}${endpoint}`;
 
   try {
     const response = await fetch(url, {
@@ -63,7 +63,17 @@ const apiRequest = async <T>(
 };
 
 export const settingsApi = {
-  getSettings: () => apiRequest<SettingsResponse>('/settings'),
+  getSettings: async () => {
+    const response = await apiRequest<{ success: boolean; data: any }>('/settings');
+    // Transform the API response to match our interface
+    return {
+      success: response.success,
+      data: {
+        ...response.data,
+        store: response.data.groups || response.data.store
+      }
+    };
+  },
   
   updateSettings: (settings: Partial<SettingsData>) =>
     apiRequest<{ success: boolean; message: string }>('/settings', {

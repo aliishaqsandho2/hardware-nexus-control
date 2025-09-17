@@ -127,6 +127,7 @@ function ims_get_inventory($request) {
         
         $summary = $wpdb->get_row($summary_sql);
         
+        
         // Format response
         $formatted_inventory = array();
         foreach ($inventory as $item) {
@@ -135,9 +136,9 @@ function ims_get_inventory($request) {
                 'productName' => $item->productName,
                 'sku' => $item->sku,
                 'category' => $item->category,
-                'currentStock' => intval($item->currentStock),
-                'minStock' => intval($item->minStock),
-                'maxStock' => intval($item->maxStock),
+                'currentStock' => floatval($item->currentStock), // Fixed: Use floatval for decimal stock values
+                'minStock' => floatval($item->minStock), // Fixed: Use floatval for decimal values
+                'maxStock' => floatval($item->maxStock), // Fixed: Use floatval for decimal values
                 'unit' => $item->unit,
                 'value' => floatval($item->value),
                 'lastRestocked' => date('Y-m-d', strtotime($item->lastRestocked)),
@@ -260,9 +261,9 @@ function ims_get_inventory_movements($request) {
                 'productId' => intval($movement->productId),
                 'productName' => $movement->productName,
                 'type' => $movement->type,
-                'quantity' => intval($movement->quantity),
-                'balanceBefore' => intval($movement->balanceBefore),
-                'balanceAfter' => intval($movement->balanceAfter),
+                'quantity' => floatval($movement->quantity), // Fixed: Use floatval for decimal quantities
+                'balanceBefore' => floatval($movement->balanceBefore), // Fixed: Use floatval for decimal balances
+                'balanceAfter' => floatval($movement->balanceAfter), // Fixed: Use floatval for decimal balances
                 'reference' => $movement->reference,
                 'reason' => $movement->reason,
                 'createdAt' => date('c', strtotime($movement->createdAt))
@@ -312,7 +313,7 @@ function ims_restock_inventory($request) {
         }
         
         $product_id = intval($body['productId']);
-        $quantity = intval($body['quantity']);
+        $quantity = floatval($body['quantity']); // Fixed: Use floatval for decimal quantities
         $cost_price = isset($body['costPrice']) ? floatval($body['costPrice']) : null;
         $supplier_id = isset($body['supplierId']) ? intval($body['supplierId']) : null;
         $purchase_order_id = isset($body['purchaseOrderId']) ? intval($body['purchaseOrderId']) : null;
@@ -337,7 +338,7 @@ function ims_restock_inventory($request) {
             return new WP_Error('product_not_found', 'Product not found or inactive', array('status' => 404));
         }
         
-        $balance_before = intval($current_product->stock);
+        $balance_before = floatval($current_product->stock); // Fixed: Use floatval for decimal stock
         $balance_after = $balance_before + $quantity;
         
         // Update product stock
@@ -349,7 +350,7 @@ function ims_restock_inventory($request) {
                 'updated_at' => current_time('mysql')
             ),
             array('id' => $product_id),
-            array('%d', '%f', '%s'),
+            array('%f', '%f', '%s'), // Fixed: Use %f for stock (decimal)
             array('%d')
         );
         
@@ -371,7 +372,7 @@ function ims_restock_inventory($request) {
                 'reason' => $notes ?: 'Manual restock',
                 'created_at' => current_time('mysql')
             ),
-            array('%d', '%s', '%d', '%d', '%d', '%s', '%s', '%s')
+            array('%d', '%s', '%f', '%f', '%f', '%s', '%s', '%s') // Fixed: Use %f for decimal quantities and balances
         );
         
         if ($movement_result === false) {
@@ -910,7 +911,7 @@ function ims_return_items($request) {
                         'sale_id' => $order_id,
                         'product_id' => $item['productId'],
                     ),
-                    array('%d', '%f'),
+                    array('%f', '%f'), // Fixed: Use %f for decimal quantity
                     array('%d', '%d')
                 );
             } else {
@@ -935,7 +936,7 @@ function ims_return_items($request) {
                     'reason' => sanitize_text_field($item['reason']),
                     'restocked' => $params['restockItems'] ? 1 : 0,
                 ),
-                array('%d', '%d', '%d', '%s', '%d')
+                array('%d', '%d', '%f', '%s', '%d') // Fixed: Use %f for decimal quantity
             );
 
             if ($params['restockItems']) {
@@ -954,7 +955,7 @@ function ims_return_items($request) {
                     "{$wpdb->prefix}ims_products",
                     array('stock' => $new_stock),
                     array('id' => $item['productId']),
-                    array('%d'),
+                    array('%f'), // Fixed: Use %f for decimal stock
                     array('%d')
                 );
 
@@ -971,12 +972,12 @@ function ims_return_items($request) {
                         'reason' => $item['reason'],
                         'created_at' => current_time('mysql', true),
                     ),
-                    array('%d', '%s', '%d', '%d', '%d', '%s', '%s', '%s')
+                    array('%d', '%s', '%f', '%f', '%f', '%s', '%s', '%s') // Fixed: Use %f for decimal quantities and balances
                 );
 
                 $updated_inventory[] = array(
                     'productId' => (int)$item['productId'],
-                    'newStock' => (int)$new_stock,
+                    'newStock' => floatval($new_stock), // Fixed: Use floatval for decimal stock
                 );
             }
         }
@@ -1003,7 +1004,7 @@ function ims_return_items($request) {
                 'itemsReturned' => array_map(function ($item) use ($params) {
                     return array(
                         'productId' => (int)$item['productId'],
-                        'quantity' => (int)$item['quantity'],
+                        'quantity' => floatval($item['quantity']), // Fixed: Use floatval for decimal quantities
                         'restocked' => $params['restockItems'],
                     );
                 }, $params['items']),
@@ -1351,9 +1352,9 @@ function ims_get_inventory_status($request) {
     foreach ($results as $row) {
         $data[] = array(
             'category' => $row->category ?: 'Uncategorized',
-            'stock' => intval($row->stock),
-            'sold' => intval($row->sold),
-            'reorderLevel' => intval($row->reorderLevel)
+            'stock' => floatval($row->stock), // Fixed: Use floatval for decimal stock values
+            'sold' => floatval($row->sold), // Fixed: Use floatval for decimal quantities
+            'reorderLevel' => floatval($row->reorderLevel) // Fixed: Use floatval for decimal values
         );
     }
     

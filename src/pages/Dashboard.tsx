@@ -184,7 +184,7 @@ export default function Dashboard() {
         <TabsContent value="overview" className="space-y-6">
           {/* Enhanced Overview Cards with gradient backgrounds */}
           <div className="grid gap-4 grid-cols-2 lg:grid-cols-4">
-            <Card className="overflow-hidden border-0 shadow-lg">
+          <Card className="col-span-1 shadow-xl border-0 rounded-2xl overflow-hidden transition-all duration-300 hover:shadow-2xl">
               <CardContent className="p-0">
                 <div className="bg-gradient-to-br from-blue-600 to-blue-900 p-4 text-white">
                   <div className="flex items-center justify-between">
@@ -207,7 +207,7 @@ export default function Dashboard() {
               </CardContent>
             </Card>
 
-            <Card className="overflow-hidden border-0 shadow-lg">
+            <Card className="col-span-1 shadow-xl border-0 rounded-2xl overflow-hidden transition-all duration-300 hover:shadow-2xl">
               <CardContent className="p-0">
                 <div className="bg-gradient-to-br from-green-600 to-green-900 p-4 text-white">
                   <div className="flex items-center justify-between">
@@ -229,7 +229,7 @@ export default function Dashboard() {
               </CardContent>
             </Card>
 
-            <Card className="overflow-hidden border-0 shadow-lg">
+            <Card className="col-span-1 shadow-xl border-0 rounded-2xl overflow-hidden transition-all duration-300 hover:shadow-2xl">
               <CardContent className="p-0">
                 <div className="bg-gradient-to-br from-red-600 to-red-900 p-4 text-white">
                   <div className="flex items-center justify-between">
@@ -250,7 +250,7 @@ export default function Dashboard() {
               </CardContent>
             </Card>
 
-            <Card className="overflow-hidden border-0 shadow-lg">
+            <Card className="col-span-1 shadow-xl border-0 rounded-2xl overflow-hidden transition-all duration-300 hover:shadow-2xl">
               <CardContent className="p-0">
                 <div className="bg-gradient-to-br from-purple-500 to-purple-900 p-4 text-white">
                   <div className="flex items-center justify-between">
@@ -274,7 +274,7 @@ export default function Dashboard() {
 
           {/* Additional Financial Metrics Row */}
           <div className="grid gap-4 grid-cols-2 lg:grid-cols-4">
-            <Card className="overflow-hidden border-0 shadow-lg">
+          <Card className="col-span-1 shadow-xl border-0 rounded-2xl overflow-hidden transition-all duration-300 hover:shadow-2xl">
               <CardContent className="p-0">
                 <div className="bg-gradient-to-br from-emerald-600 to-emerald-900 p-4 text-white">
                   <div className="flex items-center justify-between">
@@ -296,7 +296,7 @@ export default function Dashboard() {
               </CardContent>
             </Card>
 
-            <Card className="overflow-hidden border-0 shadow-lg">
+            <Card className="col-span-1 shadow-xl border-0 rounded-2xl overflow-hidden transition-all duration-300 hover:shadow-2xl">
               <CardContent className="p-0">
                 <div className="bg-gradient-to-br from-amber-600 to-amber-900 p-4 text-white">
                   <div className="flex items-center justify-between">
@@ -319,7 +319,7 @@ export default function Dashboard() {
               </CardContent>
             </Card>
 
-            <Card className="overflow-hidden border-0 shadow-lg">
+            <Card className="col-span-1 shadow-xl border-0 rounded-2xl overflow-hidden transition-all duration-300 hover:shadow-2xl">
               <CardContent className="p-0">
                 <div className="bg-gradient-to-br from-indigo-600 to-indigo-900 p-4 text-white">
                   <div className="flex items-center justify-between">
@@ -340,7 +340,7 @@ export default function Dashboard() {
               </CardContent>
             </Card>
 
-            <Card className="overflow-hidden border-0 shadow-lg">
+            <Card className="col-span-1 shadow-xl border-0 rounded-2xl overflow-hidden transition-all duration-300 hover:shadow-2xl">
               <CardContent className="p-0">
                 <div className="bg-gradient-to-br from-cyan-600 to-cyan-900 p-4 text-white">
                   <div className="flex items-center justify-between">
@@ -365,7 +365,7 @@ export default function Dashboard() {
           {/* Enhanced Charts Section */}
           <div className="grid gap-4 grid-cols-1 lg:grid-cols-2 mb-8">
             {/* Sales vs Target */}
-            <Card className="col-span-1 shadow-lg border-0">
+            <Card className="col-span-1 shadow-xl border-0 rounded-2xl overflow-hidden transition-all duration-300 hover:shadow-2xl">
               <CardHeader className="pb-3 bg-gradient-to-r from-orange-50 to-orange-100 dark:from-orange-950/20 dark:to-orange-900/20">
                 <CardTitle className="flex items-center gap-2 text-base font-semibold">
                   <Target className="h-5 w-5 text-orange-600" />
@@ -478,7 +478,7 @@ export default function Dashboard() {
 
           {/* New Analytics Section - Weekly Performance Trend */}
           <div className="grid gap-4 grid-cols-1 lg:grid-cols-2">
-            <Card className="shadow-lg border-0">
+            <Card className="col-span-1 shadow-xl border-0 rounded-2xl overflow-hidden transition-all duration-300 hover:shadow-2xl">
               <CardHeader className="pb-3 bg-gradient-to-r from-indigo-50 to-indigo-100 dark:from-indigo-950/20 dark:to-indigo-900/20">
                 <CardTitle className="flex items-center gap-2 text-base font-semibold">
                   <Activity className="h-5 w-5 text-indigo-600" />
@@ -501,7 +501,7 @@ export default function Dashboard() {
             </Card>
 
             {/* Fast Moving Products */}
-            <Card className="shadow-lg border-0">
+            <Card className="col-span-1 shadow-xl border-0 rounded-2xl overflow-hidden transition-all duration-300 hover:shadow-2xl">
               <CardHeader className="pb-3 bg-gradient-to-r from-emerald-50 to-emerald-100 dark:from-emerald-950/20 dark:to-emerald-900/20">
                 <CardTitle className="flex items-center gap-2 text-base font-semibold">
                   <Package2 className="h-5 w-5 text-emerald-600" />
@@ -532,7 +532,7 @@ export default function Dashboard() {
           {/* Enhanced Information Sections */}
           <div className="grid gap-4 grid-cols-1 lg:grid-cols-3 mt-8">
             {/* Recent High-Value Sales */}
-            <Card className="bg-card dark:bg-card shadow-lg border-0">
+            <Card className="col-span-1 shadow-xl border-0 rounded-2xl overflow-hidden transition-all duration-300 hover:shadow-2xl">
               <CardHeader className="pb-3 bg-gradient-to-r from-green-50 to-green-100 dark:from-green-950/20 dark:to-green-900/20">
                 <CardTitle className="text-base font-semibold flex items-center gap-2 text-card-foreground">
                   <CheckCircle className="h-5 w-5 text-green-500" />
@@ -558,7 +558,7 @@ export default function Dashboard() {
             </Card>
 
             {/* Recent Payments */}
-            <Card className="bg-card dark:bg-card shadow-lg border-0">
+            <Card className="col-span-1 shadow-xl border-0 rounded-2xl overflow-hidden transition-all duration-300 hover:shadow-2xl">
               <CardHeader className="pb-3 bg-gradient-to-r from-blue-50 to-blue-100 dark:from-blue-950/20 dark:to-blue-900/20">
                 <CardTitle className="text-base font-semibold flex items-center gap-2 text-card-foreground">
                   <Banknote className="h-5 w-5 text-blue-500" />
@@ -583,7 +583,7 @@ export default function Dashboard() {
             </Card>
 
             {/* System Alerts */}
-            <Card className="bg-card dark:bg-card shadow-lg border-0">
+            <Card className="col-span-1 shadow-xl border-0 rounded-2xl overflow-hidden transition-all duration-300 hover:shadow-2xl">
               <CardHeader className="pb-3 bg-gradient-to-r from-yellow-50 to-yellow-100 dark:from-yellow-950/20 dark:to-yellow-900/20">
                 <CardTitle className="text-base font-semibold flex items-center gap-2 text-card-foreground">
                   <AlertTriangle className="h-5 w-5 text-yellow-500" />
@@ -712,7 +712,7 @@ export default function Dashboard() {
           {/* Detailed Analytics Charts */}
           <div className="grid gap-6 md:grid-cols-2">
             {/* Performance Trends */}
-            <Card>
+            <Card className="col-span-1 shadow-xl border-0 rounded-2xl overflow-hidden transition-all duration-300 hover:shadow-2xl">
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
                   <TrendingUp className="h-5 w-5 text-blue-500" />
@@ -737,7 +737,7 @@ export default function Dashboard() {
             </Card>
 
             {/* Customer Analytics */}
-            <Card>
+            <Card className="col-span-1 shadow-xl border-0 rounded-2xl overflow-hidden transition-all duration-300 hover:shadow-2xl">
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
                   <Users className="h-5 w-5 text-green-500" />
@@ -779,7 +779,7 @@ export default function Dashboard() {
 
           {/* Top Customers & Fast Moving Products */}
           <div className="grid gap-6 md:grid-cols-2">
-            <Card>
+          <Card className="col-span-1 shadow-xl border-0 rounded-2xl overflow-hidden transition-all duration-300 hover:shadow-2xl">
               <CardHeader>
                 <CardTitle>Top Customers</CardTitle>
                 <CardDescription>Highest value customers</CardDescription>
@@ -805,7 +805,7 @@ export default function Dashboard() {
               </CardContent>
             </Card>
 
-            <Card>
+            <Card className="col-span-1 shadow-xl border-0 rounded-2xl overflow-hidden transition-all duration-300 hover:shadow-2xl">
               <CardHeader>
                 <CardTitle>Fast Moving Products</CardTitle>
                 <CardDescription>Best selling items</CardDescription>
@@ -835,7 +835,7 @@ export default function Dashboard() {
           {/* Enhanced Reports Section */}
           <div className="grid gap-6">
             {/* Report Generation Header */}
-            <Card>
+            <Card className="col-span-1 shadow-xl border-0 rounded-2xl overflow-hidden transition-all duration-300 hover:shadow-2xl">
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
                   <FileText className="h-6 w-6 text-blue-500" />
@@ -874,7 +874,7 @@ export default function Dashboard() {
 
             {/* Sales Report Summary */}
             {salesReport && (
-              <Card>
+              <Card className="col-span-1 shadow-xl border-0 rounded-2xl overflow-hidden transition-all duration-300 hover:shadow-2xl">
                 <CardHeader>
                   <CardTitle className="flex items-center justify-between">
                     <div className="flex items-center gap-2">
@@ -920,7 +920,7 @@ export default function Dashboard() {
 
             {/* Inventory Report Summary */}
             {inventoryReport && (
-              <Card>
+              <Card className="col-span-1 shadow-xl border-0 rounded-2xl overflow-hidden transition-all duration-300 hover:shadow-2xl">
                 <CardHeader>
                   <CardTitle className="flex items-center justify-between">
                     <div className="flex items-center gap-2">
@@ -985,7 +985,7 @@ export default function Dashboard() {
 
             {/* Financial Report Summary */}
             {financialReport && (
-              <Card>
+             <Card className="col-span-1 shadow-xl border-0 rounded-2xl overflow-hidden transition-all duration-300 hover:shadow-2xl">
                 <CardHeader>
                   <CardTitle className="flex items-center justify-between">
                     <div className="flex items-center gap-2">
@@ -1051,7 +1051,7 @@ export default function Dashboard() {
         </TabsContent>
 
         <TabsContent value="notifications" className="space-y-4">
-          <Card>
+        <Card className="col-span-1 shadow-xl border-0 rounded-2xl overflow-hidden transition-all duration-300 hover:shadow-2xl">
             <CardHeader>
               <CardTitle>Notifications</CardTitle>
               <CardDescription>System alerts and notifications</CardDescription>

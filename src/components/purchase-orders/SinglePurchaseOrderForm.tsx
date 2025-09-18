@@ -56,6 +56,7 @@ export const SinglePurchaseOrderForm = ({ onSubmit, onClose, isLoading }: Purcha
   const [expectedDelivery, setExpectedDelivery] = useState("");
   const [notes, setNotes] = useState("");
   const [items, setItems] = useState<OrderItem[]>([]);
+  const [selectedStatus, setSelectedStatus] = useState("draft");
   
   // UI states
   const [showSupplierDropdown, setShowSupplierDropdown] = useState(false);
@@ -221,7 +222,7 @@ export const SinglePurchaseOrderForm = ({ onSubmit, onClose, isLoading }: Purcha
     return items.reduce((sum, item) => sum + item.total, 0);
   };
 
-  const handleSubmit = () => {
+  const handleSubmit = (status: string = selectedStatus) => {
     if (!selectedSupplier) {
       toast({
         title: "Supplier Required",
@@ -264,6 +265,7 @@ export const SinglePurchaseOrderForm = ({ onSubmit, onClose, isLoading }: Purcha
       supplierId: selectedSupplier.id,
       expectedDelivery,
       notes,
+      status,
       items: items.map(item => ({
         productId: parseInt(item.productId),
         quantity: item.quantity,
@@ -275,16 +277,13 @@ export const SinglePurchaseOrderForm = ({ onSubmit, onClose, isLoading }: Purcha
   };
 
   return (
-    <div className="max-w-5xl mx-auto p-6 space-y-6 max-h-[85vh] overflow-y-auto">
+    <div className="w-full p-6 pt-0 space-y-6 max-h-[90vh] bg-white overflow-y-auto">
       {/* Header */}
-      <div className="flex items-center justify-between sticky top-0 bg-background/95 backdrop-blur-sm pb-4 border-b z-10">
-        <div>
+      <div className="flex items-center justify-between sticky top-0 bg-white pb-4 border-b z-10">
+        <div className="p-3 pl-0">
           <h2 className="text-2xl font-bold text-foreground">Create Purchase Order</h2>
           <p className="text-sm text-muted-foreground">Fill in the details to create a new purchase order</p>
         </div>
-        <Button variant="ghost" size="sm" onClick={onClose}>
-          <X className="h-4 w-4" />
-        </Button>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -508,52 +507,60 @@ export const SinglePurchaseOrderForm = ({ onSubmit, onClose, isLoading }: Purcha
               {/* Selected Items */}
               <div className="space-y-3">
                 {items.length > 0 ? (
-                  <div className="space-y-3 max-h-96 overflow-y-auto">
+                  <div className="space-y-2 max-h-96 overflow-y-auto">
+                    {/* Column Headers */}
+                    <div className="flex items-center gap-3 px-2 py-1 text-sm font-medium text-muted-foreground">
+                      <div className="flex-1 min-w-0">Product Name</div>
+                      <div className="flex items-center gap-2 shrink-0">
+                        <div className="w-16 text-center">Quantity</div>
+                        <div className="w-20 text-center">Unit Price</div>
+                        <div className="w-20 text-center">Total</div>
+                        <div className="w-7"></div>
+                      </div>
+                    </div>
+                    
+                    {/* Product Items */}
                     {items.map((item) => (
                       <Card key={item.productId} className="border hover:shadow-sm transition-shadow">
-                        <CardContent className="p-3">
-                          <div className="flex items-center justify-between">
-                            <div className="flex-1">
-                              <h4 className="font-medium text-sm mb-2">{item.productName}</h4>
-                              <div className="grid grid-cols-3 gap-2">
-                                <div>
-                                  <Label className="text-xs text-muted-foreground">Qty</Label>
-                                  <Input
-                                    type="number"
-                                    value={item.quantity}
-                                    onChange={(e) => updateItemQuantity(item.productId, parseInt(e.target.value) || 0)}
-                                    className="h-7"
-                                    min="0"
-                                    placeholder="0"
-                                  />
-                                </div>
-                                <div>
-                                  <Label className="text-xs text-muted-foreground">Price</Label>
-                                  <Input
-                                    type="number"
-                                    value={item.unitPrice}
-                                    onChange={(e) => updateItemPrice(item.productId, parseFloat(e.target.value) || 0)}
-                                    className="h-7"
-                                    min="0"
-                                    step="0.01"
-                                  />
-                                </div>
-                                <div>
-                                  <Label className="text-xs text-muted-foreground">Total</Label>
-                                  <div className="h-7 flex items-center px-2 bg-muted rounded text-sm font-medium">
-                                    Rs. {item.total.toLocaleString()}
-                                  </div>
-                                </div>
-                              </div>
+                        <CardContent className="p-2">
+                          <div className="flex items-center gap-3">
+                            <div className="flex-1 min-w-0">
+                              <h4 className="font-medium text-sm truncate">{item.productName}</h4>
                             </div>
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => removeItem(item.productId)}
-                              className="ml-2 h-7 w-7 p-0 text-destructive hover:bg-destructive/10"
-                            >
-                              <Trash2 className="h-3 w-3" />
-                            </Button>
+                            <div className="flex items-center gap-2 shrink-0">
+                              <div className="w-16">
+                                <Input
+                                  type="number"
+                                  value={item.quantity}
+                                  onChange={(e) => updateItemQuantity(item.productId, parseInt(e.target.value) || 0)}
+                                  className="h-7 text-xs"
+                                  min="0"
+                                  placeholder="Qty"
+                                />
+                              </div>
+                              <div className="w-20">
+                                <Input
+                                  type="number"
+                                  value={item.unitPrice}
+                                  onChange={(e) => updateItemPrice(item.productId, parseFloat(e.target.value) || 0)}
+                                  className="h-7 text-xs"
+                                  min="0"
+                                  step="0.01"
+                                  placeholder="Price"
+                                />
+                              </div>
+                              <div className="w-20 text-xs font-medium text-primary">
+                                Rs. {item.total.toLocaleString()}
+                              </div>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => removeItem(item.productId)}
+                                className="h-7 w-7 p-0 text-destructive hover:bg-destructive/10"
+                              >
+                                <Trash2 className="h-3 w-3" />
+                              </Button>
+                            </div>
                           </div>
                         </CardContent>
                       </Card>
@@ -572,25 +579,67 @@ export const SinglePurchaseOrderForm = ({ onSubmit, onClose, isLoading }: Purcha
         </div>
       </div>
 
-      {/* Submit Button */}
-      <div className="flex justify-end pt-4 border-t">
-        <Button 
-          onClick={handleSubmit} 
-          disabled={isLoading || items.length === 0}
-          className="px-6"
-        >
-          {isLoading ? (
-            <>
+      {/* Submit Buttons */}
+      <div className="flex justify-between items-center pt-4 border-t">
+        <div className="flex items-center gap-2">
+          <Label className="text-sm font-medium">Save as:</Label>
+          <Select value={selectedStatus} onValueChange={setSelectedStatus}>
+            <SelectTrigger className="w-32 h-8">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="draft">Draft</SelectItem>
+              <SelectItem value="confirmed">Confirmed</SelectItem>
+              <SelectItem value="received">Received</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+        
+        <div className="flex gap-2">
+          <Button 
+            onClick={() => handleSubmit("draft")} 
+            disabled={isLoading || items.length === 0}
+            variant="outline"
+            className="px-4"
+          >
+            {isLoading ? (
               <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-              Creating...
-            </>
-          ) : (
-            <>
-              <CheckCircle className="h-4 w-4 mr-2" />
-              Create Purchase Order
-            </>
-          )}
-        </Button>
+            ) : (
+              "Save Draft"
+            )}
+          </Button>
+          
+          <Button 
+            onClick={() => handleSubmit("confirmed")} 
+            disabled={isLoading || items.length === 0}
+            className="px-4"
+          >
+            {isLoading ? (
+              <>
+                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                Creating...
+              </>
+            ) : (
+              <>
+                <CheckCircle className="h-4 w-4 mr-2" />
+                Confirm Order
+              </>
+            )}
+          </Button>
+          
+          <Button 
+            onClick={() => handleSubmit("received")} 
+            disabled={isLoading || items.length === 0}
+            variant="secondary"
+            className="px-4"
+          >
+            {isLoading ? (
+              <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+            ) : (
+              "Mark Received"
+            )}
+          </Button>
+        </div>
       </div>
 
       {/* Add Supplier Modal */}

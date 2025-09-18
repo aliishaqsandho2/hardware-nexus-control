@@ -1,5 +1,5 @@
 const API_BASE_URL_KEY = 'ims_api_base_url';
-const DEFAULT_BASE_URL = 'https://usmanhardware.site/wp-json/ims/v1';
+const DEFAULT_BASE_URL = 'https://zaidawn.site/wp-json/ims/v1';
 
 export const apiConfig = {
   getBaseUrl: (): string => {

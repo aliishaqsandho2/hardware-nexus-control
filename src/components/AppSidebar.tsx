@@ -32,7 +32,8 @@ import {
   Database,
   PieChart,
   ShoppingBag,
-  MessageCircle
+  MessageCircle,
+  Bot
 } from "lucide-react"
 import { useNavigate, useLocation } from "react-router-dom"
 import { useToast } from "@/hooks/use-toast"
@@ -53,6 +54,12 @@ const mainItems: MenuItem[] = [
     title: "Dashboard",
     url: "/",
     icon: Home,
+  },
+  {
+    title: "Auto Mate",
+    url: "/automate",
+    icon: Bot,
+    badge: "AI"
   },
   {
     title: "Profit Analytics",

@@ -1,5 +1,4 @@
-
-import { useState, useEffect } from "react";
+import React, { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -10,7 +9,7 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
-import { FileText, Search, Plus, Calendar, Truck, DollarSign, User, Package, CheckCircle, Clock, XCircle, Loader2, Eye, Edit, Trash2, Send, PackageCheck, Info } from "lucide-react";
+import { FileText, Search, Plus, Calendar, Truck, DollarSign, User, Package, CheckCircle, Clock, XCircle, Loader2, Eye, Edit, Trash2, Send, PackageCheck, Info, ChevronDown, ChevronRight } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { purchaseOrdersApi, suppliersApi, productsApi } from "@/services/api";
@@ -30,12 +29,6 @@ import {
   PaginationNext, 
   PaginationPrevious 
 } from "@/components/ui/pagination";
-import { 
-  Tooltip, 
-  TooltipContent, 
-  TooltipProvider, 
-  TooltipTrigger 
-} from "@/components/ui/tooltip";
 import { SinglePurchaseOrderForm } from "@/components/purchase-orders/SinglePurchaseOrderForm";
 import { apiConfig } from "@/utils/apiConfig";
 
@@ -52,6 +45,7 @@ const PurchaseOrders = () => {
   const [newStatus, setNewStatus] = useState("");
   const [statusNotes, setStatusNotes] = useState("");
   const [isStatusDialogOpen, setIsStatusDialogOpen] = useState(false);
+  const [expandedRow, setExpandedRow] = useState<number | null>(null);
   const itemsPerPage = 20;
 
   // Fetch purchase orders with updated parameters
@@ -408,140 +402,208 @@ const PurchaseOrders = () => {
             </TableHeader>
             <TableBody>
               {filteredOrders.map((order: any) => (
-                <TableRow key={order.id}>
-                  <TableCell className="font-medium">{order.orderNumber}</TableCell>
-                  <TableCell>{order.supplierName}</TableCell>
-                  <TableCell>{new Date(order.date).toLocaleDateString()}</TableCell>
-                  <TableCell>
-                    {order.expectedDelivery ? new Date(order.expectedDelivery).toLocaleDateString() : 'Not set'}
-                  </TableCell>
-                  <TableCell>
-                    <TooltipProvider>
-                      <Tooltip>
-                        <TooltipTrigger asChild>
-                          <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
-                            <Info className="h-4 w-4 text-primary" />
+                <React.Fragment key={order.id}>
+                  <TableRow 
+                    className="cursor-pointer hover:bg-muted/50 transition-colors duration-200 group"
+                    onClick={() => setExpandedRow(expandedRow === order.id ? null : order.id)}
+                  >
+                    <TableCell className="font-medium">
+                      <div className="flex items-center gap-2">
+                        {expandedRow === order.id ? (
+                          <ChevronDown className="h-4 w-4 text-muted-foreground transition-transform duration-200" />
+                        ) : (
+                          <ChevronRight className="h-4 w-4 text-muted-foreground transition-transform duration-200" />
+                        )}
+                        {order.orderNumber}
+                      </div>
+                    </TableCell>
+                    <TableCell>{order.supplierName}</TableCell>
+                    <TableCell>{new Date(order.date).toLocaleDateString()}</TableCell>
+                    <TableCell>
+                      {order.expectedDelivery ? new Date(order.expectedDelivery).toLocaleDateString() : 'Not set'}
+                    </TableCell>
+                    <TableCell>
+                      <div className="flex items-center gap-1">
+                        <Package className="h-4 w-4 text-muted-foreground" />
+                        {order.items?.length || 0} items
+                      </div>
+                    </TableCell>
+                    <TableCell>
+                      <Badge className={getStatusColor(order.status)}>
+                        {getStatusIcon(order.status)}
+                        <span className="ml-1 capitalize">{order.status}</span>
+                      </Badge>
+                    </TableCell>
+                    <TableCell>Rs. {order.total?.toLocaleString()}</TableCell>
+                    <TableCell>
+                      <div className="flex gap-1">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleViewOrder(order);
+                          }}
+                        >
+                          <Eye className="h-3 w-3 mr-1" />
+                          View
+                        </Button>
+                        
+                        {getAvailableStatusTransitions(order.status).length > 0 && (
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleEditStatus(order);
+                            }}
+                            disabled={updateStatusMutation.isPending}
+                          >
+                            {updateStatusMutation.isPending ? (
+                              <Loader2 className="h-3 w-3 mr-1 animate-spin" />
+                            ) : (
+                              <Edit className="h-3 w-3 mr-1" />
+                            )}
+                            Update
                           </Button>
-                        </TooltipTrigger>
-                        <TooltipContent side="top" className="max-w-sm p-4">
-                          <div className="space-y-3">
-                            <div className="text-sm font-semibold text-foreground border-b border-border pb-2">
-                              Order Items ({order.items?.length || 0})
+                        )}
+
+                        {order.status === "draft" && (
+                          <AlertDialog>
+                            <AlertDialogTrigger asChild>
+                              <Button 
+                                variant="outline" 
+                                size="sm" 
+                                className="text-red-600"
+                                disabled={deleteOrderMutation.isPending}
+                                onClick={(e) => e.stopPropagation()}
+                              >
+                                {deleteOrderMutation.isPending ? (
+                                  <Loader2 className="h-3 w-3 mr-1 animate-spin" />
+                                ) : (
+                                  <Trash2 className="h-3 w-3 mr-1" />
+                                )}
+                                Delete
+                              </Button>
+                            </AlertDialogTrigger>
+                            <AlertDialogContent>
+                              <AlertDialogHeader>
+                                <AlertDialogTitle>Delete Purchase Order</AlertDialogTitle>
+                                <AlertDialogDescription>
+                                  Are you sure you want to delete this purchase order? This action cannot be undone.
+                                  Only draft orders can be deleted.
+                                </AlertDialogDescription>
+                              </AlertDialogHeader>
+                              <AlertDialogFooter>
+                                <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                <AlertDialogAction 
+                                  onClick={() => deleteOrderMutation.mutate(order.id)}
+                                  className="bg-red-600 hover:bg-red-700"
+                                  disabled={deleteOrderMutation.isPending}
+                                >
+                                  {deleteOrderMutation.isPending ? (
+                                    <>
+                                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                                      Deleting...
+                                    </>
+                                  ) : (
+                                    "Delete"
+                                  )}
+                                </AlertDialogAction>
+                              </AlertDialogFooter>
+                            </AlertDialogContent>
+                          </AlertDialog>
+                        )}
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                  
+                  {/* Expandable Row Content */}
+                  {expandedRow === order.id && (
+                    <TableRow className="bg-muted/30 hover:bg-muted/30">
+                      <TableCell colSpan={8} className="p-0">
+                        <div className="animate-accordion-down overflow-hidden">
+                          <div className="border-t border-border bg-card/50">
+                            <div className="flex items-center justify-between p-4 bg-primary/10 border-b border-border">
+                              <div className="flex items-center gap-2">
+                                <Package className="h-5 w-5 text-primary" />
+                                <h4 className="font-semibold text-foreground">
+                                  Order Items ({order.items?.length || 0})
+                                </h4>
+                              </div>
+                              <div className="text-sm text-muted-foreground">
+                                Total: <span className="font-semibold text-foreground">Rs. {order.total?.toLocaleString()}</span>
+                              </div>
                             </div>
-                            <div className="max-h-40 overflow-y-auto space-y-2">
-                              {order.items?.map((item: any, index: number) => (
-                                <div key={index} className="flex justify-between items-start gap-3 text-xs">
-                                  <div className="flex-1 min-w-0">
-                                    <div className="font-medium text-foreground truncate">
-                                      {item.productName || item.name}
-                                    </div>
-                                    <div className="text-muted-foreground">
-                                      Qty: {item.quantity} × Rs. {item.unitPrice?.toLocaleString()}
-                                    </div>
+                            
+                            {order.items && order.items.length > 0 ? (
+                              <div className="p-0">
+                                <Table>
+                                  <TableHeader>
+                                    <TableRow className="bg-muted/50">
+                                      <TableHead className="w-12 text-center">#</TableHead>
+                                      <TableHead className="min-w-[300px]">Product Name</TableHead>
+                                      <TableHead className="text-center w-24">Qty</TableHead>
+                                      <TableHead className="text-right w-32">Unit Price</TableHead>
+                                      <TableHead className="text-right w-32">Total</TableHead>
+                                    </TableRow>
+                                  </TableHeader>
+                                  <TableBody>
+                                    {order.items.map((item: any, index: number) => (
+                                      <TableRow 
+                                        key={index} 
+                                        className="hover:bg-muted/30 transition-colors duration-200"
+                                      >
+                                        <TableCell className="text-center text-muted-foreground font-mono">
+                                          {index + 1}
+                                        </TableCell>
+                                        <TableCell className="font-medium">
+                                          <div className="flex flex-col">
+                                            <span className="text-foreground">{item.productName || item.name}</span>
+                                            {item.sku && (
+                                              <span className="text-xs text-muted-foreground">SKU: {item.sku}</span>
+                                            )}
+                                          </div>
+                                        </TableCell>
+                                        <TableCell className="text-center">
+                                          <Badge variant="secondary" className="font-mono">
+                                            {item.quantity}
+                                          </Badge>
+                                        </TableCell>
+                                        <TableCell className="text-right font-mono text-muted-foreground">
+                                          Rs. {item.unitPrice?.toLocaleString()}
+                                        </TableCell>
+                                        <TableCell className="text-right font-mono font-semibold text-primary">
+                                          Rs. {(item.quantity * item.unitPrice)?.toLocaleString()}
+                                        </TableCell>
+                                      </TableRow>
+                                    ))}
+                                  </TableBody>
+                                </Table>
+                              </div>
+                            ) : (
+                              <div className="text-center py-8 text-muted-foreground">
+                                <Package className="h-12 w-12 mx-auto mb-3 opacity-50" />
+                                <p className="text-sm">No items found in this order</p>
+                              </div>
+                            )}
+                            
+                            {order.notes && (
+                              <div className="px-4 pb-4">
+                                <div className="p-3 bg-muted/50 rounded-lg border border-border">
+                                  <div className="text-sm">
+                                    <span className="font-medium text-foreground">Notes: </span>
+                                    <span className="text-muted-foreground">{order.notes}</span>
                                   </div>
-                                  <div className="text-right font-medium text-foreground">
-                                    Rs. {(item.quantity * item.unitPrice)?.toLocaleString()}
-                                  </div>
-                                </div>
-                              )) || (
-                                <div className="text-xs text-muted-foreground">No items found</div>
-                              )}
-                            </div>
-                            {order.items?.length > 0 && (
-                              <div className="pt-2 border-t border-border">
-                                <div className="flex justify-between text-sm font-semibold text-foreground">
-                                  <span>Total:</span>
-                                  <span>Rs. {order.total?.toLocaleString()}</span>
                                 </div>
                               </div>
                             )}
                           </div>
-                        </TooltipContent>
-                      </Tooltip>
-                    </TooltipProvider>
-                  </TableCell>
-                  <TableCell>
-                    <Badge className={getStatusColor(order.status)}>
-                      {getStatusIcon(order.status)}
-                      <span className="ml-1 capitalize">{order.status}</span>
-                    </Badge>
-                  </TableCell>
-                  <TableCell>Rs. {order.total?.toLocaleString()}</TableCell>
-                  <TableCell>
-                    <div className="flex gap-1">
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => handleViewOrder(order)}
-                      >
-                        <Eye className="h-3 w-3 mr-1" />
-                        View
-                      </Button>
-                      
-                      {getAvailableStatusTransitions(order.status).length > 0 && (
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => handleEditStatus(order)}
-                          disabled={updateStatusMutation.isPending}
-                        >
-                          {updateStatusMutation.isPending ? (
-                            <Loader2 className="h-3 w-3 mr-1 animate-spin" />
-                          ) : (
-                            <Edit className="h-3 w-3 mr-1" />
-                          )}
-                          Update
-                        </Button>
-                      )}
-
-                      {order.status === "draft" && (
-                        <AlertDialog>
-                          <AlertDialogTrigger asChild>
-                            <Button 
-                              variant="outline" 
-                              size="sm" 
-                              className="text-red-600"
-                              disabled={deleteOrderMutation.isPending}
-                            >
-                              {deleteOrderMutation.isPending ? (
-                                <Loader2 className="h-3 w-3 mr-1 animate-spin" />
-                              ) : (
-                                <Trash2 className="h-3 w-3 mr-1" />
-                              )}
-                              Delete
-                            </Button>
-                          </AlertDialogTrigger>
-                          <AlertDialogContent>
-                            <AlertDialogHeader>
-                              <AlertDialogTitle>Delete Purchase Order</AlertDialogTitle>
-                              <AlertDialogDescription>
-                                Are you sure you want to delete this purchase order? This action cannot be undone.
-                                Only draft orders can be deleted.
-                              </AlertDialogDescription>
-                            </AlertDialogHeader>
-                            <AlertDialogFooter>
-                              <AlertDialogCancel>Cancel</AlertDialogCancel>
-                              <AlertDialogAction 
-                                onClick={() => deleteOrderMutation.mutate(order.id)}
-                                className="bg-red-600 hover:bg-red-700"
-                                disabled={deleteOrderMutation.isPending}
-                              >
-                                {deleteOrderMutation.isPending ? (
-                                  <>
-                                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                                    Deleting...
-                                  </>
-                                ) : (
-                                  "Delete"
-                                )}
-                              </AlertDialogAction>
-                            </AlertDialogFooter>
-                          </AlertDialogContent>
-                        </AlertDialog>
-                      )}
-                    </div>
-                  </TableCell>
-                </TableRow>
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  )}
+                </React.Fragment>
               ))}
             </TableBody>
           </Table>

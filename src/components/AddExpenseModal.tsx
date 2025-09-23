@@ -66,7 +66,7 @@ export default function AddExpenseModal({ open, onOpenChange, onExpenseAdded }: 
       // Format date as YYYY-MM-DD for API
       const formattedDate = format(selectedDate, "yyyy-MM-dd");
       
-      const response = await fetch('https://aliishaq.site/wp-json/ims/v1/finance/expenses', {
+      const response = await fetch('https://usmanhardware.site/wp-json/ims/v1/finance/expenses', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

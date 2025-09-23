@@ -68,7 +68,7 @@ export default function ScheduleExpenseModal({ open, onOpenChange, onExpenseSche
     try {
       const formattedDate = format(startDate, "yyyy-MM-dd");
       
-      const response = await fetch('https://aliishaq.site/wp-json/ims/v1/finance/scheduled-expenses', {
+      const response = await fetch('https://usmanhardware.site/wp-json/ims/v1/finance/scheduled-expenses', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

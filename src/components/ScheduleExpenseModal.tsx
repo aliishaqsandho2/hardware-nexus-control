@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { format } from "date-fns";
-import { CalendarIcon } from "lucide-react";
+import { CalendarIcon, Clock } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -12,21 +12,22 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { useToast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
 
-interface AddExpenseModalProps {
+interface ScheduleExpenseModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  onExpenseAdded: () => void;
+  onExpenseScheduled: () => void;
 }
 
-export default function AddExpenseModal({ open, onOpenChange, onExpenseAdded }: AddExpenseModalProps) {
+export default function ScheduleExpenseModal({ open, onOpenChange, onExpenseScheduled }: ScheduleExpenseModalProps) {
   const { toast } = useToast();
   const [loading, setLoading] = useState(false);
-  const [selectedDate, setSelectedDate] = useState<Date>();
+  const [startDate, setStartDate] = useState<Date>();
   const [formData, setFormData] = useState({
     category: "",
     description: "",
     amount: "",
     accountId: "",
+    frequency: "",
     paymentMethod: "cash" as "cash" | "bank_transfer" | "cheque"
   });
 
@@ -38,6 +39,8 @@ export default function AddExpenseModal({ open, onOpenChange, onExpenseAdded }: 
     "Marketing",
     "Office Supplies",
     "Equipment",
+    "Insurance",
+    "Professional Services",
     "Other"
   ];
 
@@ -51,7 +54,7 @@ export default function AddExpenseModal({ open, onOpenChange, onExpenseAdded }: 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!formData.category || !formData.description || !formData.amount || !selectedDate || !formData.accountId) {
+    if (!formData.category || !formData.description || !formData.amount || !startDate || !formData.frequency || !formData.accountId) {
       toast({
         title: "Error",
         description: "Please fill in all required fields",
@@ -63,10 +66,9 @@ export default function AddExpenseModal({ open, onOpenChange, onExpenseAdded }: 
     setLoading(true);
 
     try {
-      // Format date as YYYY-MM-DD for API
-      const formattedDate = format(selectedDate, "yyyy-MM-dd");
+      const formattedDate = format(startDate, "yyyy-MM-dd");
       
-      const response = await fetch('https://aliishaq.site/wp-json/ims/v1/finance/expenses', {
+      const response = await fetch('https://aliishaq.site/wp-json/ims/v1/finance/scheduled-expenses', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -75,21 +77,21 @@ export default function AddExpenseModal({ open, onOpenChange, onExpenseAdded }: 
           category: formData.category,
           description: formData.description,
           amount: parseFloat(formData.amount),
-          date: formattedDate,
           accountId: formData.accountId,
-          reference: `EXP-${Date.now()}`,
-          payment_method: formData.paymentMethod,
-          receipt_url: ""
+          frequency: formData.frequency,
+          startDate: formattedDate,
+          paymentMethod: formData.paymentMethod,
+          reference: `SCH-EXP-${Date.now()}`,
+          status: "active"
         })
       });
 
       const result = await response.json();
-      console.log('API Response:', result);
 
       if (response.ok && result.success) {
         toast({
           title: "Success",
-          description: "Expense added successfully",
+          description: "Expense scheduled successfully",
         });
         
         // Reset form
@@ -98,20 +100,21 @@ export default function AddExpenseModal({ open, onOpenChange, onExpenseAdded }: 
           description: "",
           amount: "",
           accountId: "",
+          frequency: "",
           paymentMethod: "cash"
         });
-        setSelectedDate(undefined);
+        setStartDate(undefined);
         
-        onExpenseAdded();
+        onExpenseScheduled();
         onOpenChange(false);
       } else {
-        throw new Error(result.message || 'Failed to add expense');
+        throw new Error(result.message || 'Failed to schedule expense');
       }
     } catch (error) {
-      console.error('Error adding expense:', error);
+      console.error('Error scheduling expense:', error);
       toast({
         title: "Error",
-        description: error instanceof Error ? error.message : "Failed to add expense. Please try again.",
+        description: error instanceof Error ? error.message : "Failed to schedule expense. Please try again.",
         variant: "destructive",
       });
     } finally {
@@ -123,7 +126,12 @@ export default function AddExpenseModal({ open, onOpenChange, onExpenseAdded }: 
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-[600px]">
         <DialogHeader>
-          <DialogTitle>Add New Expense</DialogTitle>
+          <DialogTitle className="flex items-center gap-2">
+            <div className="bg-blue-100 p-2 rounded-lg">
+              <Clock className="h-5 w-5 text-blue-600" />
+            </div>
+            Schedule Recurring Expense
+          </DialogTitle>
         </DialogHeader>
         
         <form onSubmit={handleSubmit} className="space-y-4">
@@ -169,34 +177,22 @@ export default function AddExpenseModal({ open, onOpenChange, onExpenseAdded }: 
             />
           </div>
 
-          <div className="space-y-2">
-            <Label>Date *</Label>
-            <Popover>
-              <PopoverTrigger asChild>
-                <Button
-                  variant="outline"
-                  className={cn(
-                    "w-full justify-start text-left font-normal",
-                    !selectedDate && "text-muted-foreground"
-                  )}
-                >
-                  <CalendarIcon className="mr-2 h-4 w-4" />
-                  {selectedDate ? format(selectedDate, "dd/MM/yyyy") : "Pick a date"}
-                </Button>
-              </PopoverTrigger>
-              <PopoverContent className="w-auto p-0" align="start">
-                <Calendar
-                  mode="single"
-                  selected={selectedDate}
-                  onSelect={setSelectedDate}
-                  initialFocus
-                  className="pointer-events-auto"
-                />
-              </PopoverContent>
-            </Popover>
-          </div>
-
           <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label>Frequency *</Label>
+              <Select value={formData.frequency} onValueChange={(value) => setFormData(prev => ({ ...prev, frequency: value }))}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Select frequency" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="daily">Daily</SelectItem>
+                  <SelectItem value="weekly">Weekly</SelectItem>
+                  <SelectItem value="monthly">Monthly</SelectItem>
+                  <SelectItem value="yearly">Yearly</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
             <div className="space-y-2">
               <Label>Account to Debit *</Label>
               <Select value={formData.accountId} onValueChange={(value) => setFormData(prev => ({ ...prev, accountId: value }))}>
@@ -212,7 +208,9 @@ export default function AddExpenseModal({ open, onOpenChange, onExpenseAdded }: 
                 </SelectContent>
               </Select>
             </div>
+          </div>
 
+          <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
               <Label>Payment Method *</Label>
               <Select value={formData.paymentMethod} onValueChange={(value: "cash" | "bank_transfer" | "cheque") => setFormData(prev => ({ ...prev, paymentMethod: value }))}>
@@ -226,6 +224,33 @@ export default function AddExpenseModal({ open, onOpenChange, onExpenseAdded }: 
                 </SelectContent>
               </Select>
             </div>
+
+            <div className="space-y-2">
+              <Label>Start Date *</Label>
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button
+                    variant="outline"
+                    className={cn(
+                      "w-full justify-start text-left font-normal",
+                      !startDate && "text-muted-foreground"
+                    )}
+                  >
+                    <CalendarIcon className="mr-2 h-4 w-4" />
+                    {startDate ? format(startDate, "dd/MM/yyyy") : "Pick start date"}
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-0" align="start">
+                  <Calendar
+                    mode="single"
+                    selected={startDate}
+                    onSelect={setStartDate}
+                    initialFocus
+                    className="pointer-events-auto"
+                  />
+                </PopoverContent>
+              </Popover>
+            </div>
           </div>
 
           <DialogFooter>
@@ -233,7 +258,7 @@ export default function AddExpenseModal({ open, onOpenChange, onExpenseAdded }: 
               Cancel
             </Button>
             <Button type="submit" disabled={loading}>
-              {loading ? "Adding..." : "Add Expense"}
+              {loading ? "Scheduling..." : "Schedule Expense"}
             </Button>
           </DialogFooter>
         </form>

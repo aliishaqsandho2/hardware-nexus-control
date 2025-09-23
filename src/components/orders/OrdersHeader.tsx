@@ -12,7 +12,7 @@ export const OrdersHeader = ({ onPDFExport, exportLoading }: OrdersHeaderProps) 
     <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-2">
       <div className="flex items-center gap-2">
         <div>
-          <h1 className="text-3xl font-bold text-slate-500">Orders Management</h1>
+          <h1 className="text-3xl font-bold text-slate-500">Sales Management</h1>
           <p className="text-slate-600">View and manage all customer orders</p>
         </div>
       </div>

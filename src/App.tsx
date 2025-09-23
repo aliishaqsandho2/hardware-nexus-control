@@ -26,8 +26,9 @@ import CustomerInsights from "./pages/CustomerInsights";
 import Notifications from "./pages/Notifications";
 import Settings from "./pages/Settings";
 import BackupSync from "./pages/BackupSync";
-import Calendar from "./pages/Calendar";
-import AccountsReceivable from "./pages/AccountsReceivable";
+import Accounts from "./pages/Accounts";
+import Profile from "./pages/Profile";
+import Employees from "./pages/Employees";
 import OutsourcedOrders from "./pages/OutsourcedOrders";
 import Profit from "./pages/Profit";
 
@@ -60,13 +61,14 @@ const App = () => (
                     <Route path="/suppliers" element={<Suppliers />} />
                     <Route path="/purchase-orders" element={<PurchaseOrders />} />
                     <Route path="/quotations" element={<Quotations />} />
-                    <Route path="/expense-tracking" element={<ExpenseTracking />} />
-                    <Route path="/customer-insights" element={<CustomerInsights />} />
-                    <Route path="/notifications" element={<Notifications />} />
-                    <Route path="/settings" element={<Settings />} />
-                    <Route path="/backup" element={<BackupSync />} />
-                    <Route path="/calendar" element={<Calendar />} />
-                    <Route path="/accounts-receivable" element={<AccountsReceivable />} />
+                     <Route path="/expense-tracking" element={<ExpenseTracking />} />
+                     <Route path="/customer-insights" element={<CustomerInsights />} />
+                     <Route path="/notifications" element={<Notifications />} />
+        <Route path="/accounts" element={<Accounts />} />
+        <Route path="/profile" element={<Profile />} />
+                     <Route path="/employees" element={<Employees />} />
+                     <Route path="/settings" element={<Settings />} />
+                     <Route path="/backup" element={<BackupSync />} />
                     <Route path="/finance" element={<Finance />} />
                     <Route path="/reports" element={<Reports />} />
                     <Route path="*" element={<NotFound />} />

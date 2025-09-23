@@ -1,6 +1,6 @@
 
 import { useState, useEffect } from "react";
-import { Plus, Search, Filter, Calendar, TrendingUp, TrendingDown, Edit2, Trash2, Eye, Download } from "lucide-react";
+import { Plus, Search, Filter, Calendar, TrendingUp, TrendingDown, Edit2, Trash2, Eye, Download, DollarSign, ChevronDown, Tag, Clock, RefreshCw } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
@@ -20,72 +20,83 @@ import {
 } from "@/components/ui/table";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
 import { useToast } from "@/hooks/use-toast";
-import { financeApi } from "@/services/financeApi";
-
-interface Expense {
-  id: number;
-  category: string;
-  description: string;
-  amount: number;
-  date: string;
-  payment_method: 'cash' | 'bank_transfer' | 'cheque';
-  reference: string;
-  receipt_url?: string;
-  created_at: string;
-  updated_at: string;
-}
+import { expenseApi, type Expense } from "@/services/expenseApi";
+import AddExpenseModal from "@/components/AddExpenseModal";
+import ScheduleExpenseModal from "@/components/ScheduleExpenseModal";
+import AddExpenseCategoryModal from "@/components/AddExpenseCategoryModal";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 
 interface ExpenseSummary {
   totalExpenses: number;
-  categories: Array<{ category: string; amount: number; count: number }>;
-  paymentMethods: Array<{ method: string; amount: number; count: number }>;
+  expensesByCategory: Array<{ 
+    category: string; 
+    amount: number; 
+    count: number; 
+    percentage: number; 
+  }>;
+  expensesByPaymentMethod: Array<{ 
+    payment_method: string; 
+    amount: number; 
+    count: number; 
+    percentage: number; 
+  }>;
+  expensesByAccount: Array<{
+    account_id: number;
+    account_name: string;
+    amount: number;
+    count: number;
+  }>;
+  monthlyTrend: Array<{
+    month: string;
+    amount: number;
+    count: number;
+  }>;
 }
-
-import { apiConfig } from '@/utils/apiConfig';
 
 export default function ExpenseTracking() {
   const { toast } = useToast();
   const [expenses, setExpenses] = useState<Expense[]>([]);
   const [summary, setSummary] = useState<ExpenseSummary>({
     totalExpenses: 0,
-    categories: [],
-    paymentMethods: []
+    expensesByCategory: [],
+    expensesByPaymentMethod: [],
+    expensesByAccount: [],
+    monthlyTrend: []
   });
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedCategory, setSelectedCategory] = useState("");
   const [showAddModal, setShowAddModal] = useState(false);
+  const [showScheduleModal, setShowScheduleModal] = useState(false);
+  const [showCategoryModal, setShowCategoryModal] = useState(false);
   const [editingExpense, setEditingExpense] = useState<Expense | null>(null);
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
 
   useEffect(() => {
     fetchExpenses();
+    fetchExpenseSummary();
   }, [selectedCategory, currentPage]);
 
   const fetchExpenses = async () => {
     try {
       setLoading(true);
-      const params = new URLSearchParams({
-        page: currentPage.toString(),
-        limit: '50'
-      });
+      const params: any = {
+        page: currentPage,
+        limit: 50
+      };
       
       if (selectedCategory) {
-        params.append('category', selectedCategory);
+        params.category = selectedCategory;
       }
 
-      const response = await fetch(`${apiConfig.getBaseUrl()}/finance/expenses?${params}`);
-      const data = await response.json();
+      const response = await expenseApi.getExpenses(params);
       
-      if (data.success) {
-        setExpenses(data.data.expenses || []);
-        if (data.data.pagination) {
-          setTotalPages(data.data.pagination.totalPages);
+      if (response.success) {
+        setExpenses(response.data);
+        if (response.pagination) {
+          setTotalPages(response.pagination.totalPages);
         }
-        
-        // Calculate summary from fetched data
-        calculateSummary(data.data.expenses || []);
       }
     } catch (error) {
       console.error('Error fetching expenses:', error);
@@ -96,6 +107,17 @@ export default function ExpenseTracking() {
       });
     } finally {
       setLoading(false);
+    }
+  };
+
+  const fetchExpenseSummary = async () => {
+    try {
+      const response = await expenseApi.getExpenseSummary({ period: 'month' });
+      if (response.success) {
+        setSummary(response.data);
+      }
+    } catch (error) {
+      console.error('Error fetching expense summary:', error);
     }
   };
 
@@ -123,31 +145,34 @@ export default function ExpenseTracking() {
     
     setSummary({
       totalExpenses,
-      categories: Array.from(categoryMap.entries()).map(([category, data]) => ({
+      expensesByCategory: Array.from(categoryMap.entries()).map(([category, data]) => ({
         category,
         amount: data.amount,
-        count: data.count
+        count: data.count,
+        percentage: (data.amount / totalExpenses) * 100
       })),
-      paymentMethods: Array.from(paymentMethodMap.entries()).map(([method, data]) => ({
-        method,
+      expensesByPaymentMethod: Array.from(paymentMethodMap.entries()).map(([method, data]) => ({
+        payment_method: method,
         amount: data.amount,
-        count: data.count
-      }))
+        count: data.count,
+        percentage: (data.amount / totalExpenses) * 100
+      })),
+      expensesByAccount: [],
+      monthlyTrend: []
     });
   };
 
   const handleCreateExpense = async (expenseData: any) => {
     try {
-      const data = await financeApi.createExpense(expenseData);
-      if (data.success) {
+      const response = await expenseApi.createExpense(expenseData);
+      if (response.success) {
         toast({
           title: "Success",
           description: "Expense created successfully",
         });
         setShowAddModal(false);
         fetchExpenses();
-      } else {
-        throw new Error(data.message || 'Failed to create expense');
+        fetchExpenseSummary();
       }
     } catch (error) {
       console.error('Error creating expense:', error);
@@ -161,22 +186,15 @@ export default function ExpenseTracking() {
 
   const handleUpdateExpense = async (id: number, expenseData: any) => {
     try {
-      const response = await fetch(`${apiConfig.getBaseUrl()}/finance/expenses/${id}`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(expenseData)
-      });
-      
-      const data = await response.json();
-      if (data.success) {
+      const response = await expenseApi.updateExpense(id, expenseData);
+      if (response.success) {
         toast({
           title: "Success",
           description: "Expense updated successfully",
         });
         setEditingExpense(null);
         fetchExpenses();
-      } else {
-        throw new Error(data.message || 'Failed to update expense');
+        fetchExpenseSummary();
       }
     } catch (error) {
       console.error('Error updating expense:', error);
@@ -192,19 +210,14 @@ export default function ExpenseTracking() {
     if (!confirm('Are you sure you want to delete this expense?')) return;
     
     try {
-      const response = await fetch(`${apiConfig.getBaseUrl()}/finance/expenses/${id}`, {
-        method: 'DELETE'
-      });
-      
-      const data = await response.json();
-      if (data.success) {
+      const response = await expenseApi.deleteExpense(id);
+      if (response.success) {
         toast({
           title: "Success",
           description: "Expense deleted successfully",
         });
         fetchExpenses();
-      } else {
-        throw new Error(data.message || 'Failed to delete expense');
+        fetchExpenseSummary();
       }
     } catch (error) {
       console.error('Error deleting expense:', error);
@@ -243,20 +256,20 @@ export default function ExpenseTracking() {
     // Handle undefined, null, or empty method
     if (!method) {
       return (
-        <Badge className="bg-gray-100 text-gray-800 border border-gray-200">
+        <Badge variant="secondary">
           Unknown
         </Badge>
       );
     }
 
-    const colors = {
-      cash: 'bg-green-100 text-green-800 border-green-200',
-      bank_transfer: 'bg-blue-100 text-blue-800 border-blue-200',
-      cheque: 'bg-purple-100 text-purple-800 border-purple-200'
+    const variants = {
+      cash: 'default',
+      bank_transfer: 'outline', 
+      cheque: 'secondary'
     };
     
     return (
-      <Badge className={`${colors[method as keyof typeof colors] || 'bg-gray-100 text-gray-800'} border`}>
+      <Badge variant={variants[method as keyof typeof variants] as any || 'secondary'}>
         {method.replace('_', ' ')}
       </Badge>
     );
@@ -276,152 +289,121 @@ export default function ExpenseTracking() {
 
   return (
     <div className="p-3 space-y-3 min-h-[calc(100vh-65px)]">
-      <div className="flex items-center gap-4 mb-8">
-      
-        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 flex-1">
-          <div>
-            <h1 className="text-3xl font-bold bg-gradient-to-r from-slate-500 to-slate-500 bg-clip-text text-transparent">
-              Expense Management
-            </h1>
-            <p className="text-slate-600 mt-1">Track and manage your business expenses</p>
-          </div>
-          <Button 
-            className="bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 shadow-lg"
-            onClick={() => setShowAddModal(true)}
-          >
-            <Plus className="h-4 w-4 mr-2" />
-            Add Expense
-          </Button>
-        </div>
+      {/* Top Action Buttons */}
+      <div className="flex flex-wrap gap-3 mb-6">
+        <Button 
+          onClick={() => setShowAddModal(true)}
+          className="bg-primary hover:bg-primary/90 text-primary-foreground"
+        >
+          <Plus className="h-4 w-4 mr-2" />
+          Add Expense
+        </Button>
+        <Button 
+          variant="outline"
+          onClick={() => setShowScheduleModal(true)}
+          className="border-border hover:bg-accent"
+        >
+          <Clock className="h-4 w-4 mr-2" />
+          Schedule Expense
+        </Button>
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button variant="outline" className="border-border hover:bg-accent">
+              <Tag className="h-4 w-4 mr-2" />
+              Categories
+              <ChevronDown className="h-4 w-4 ml-2" />
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end" className="w-56">
+            <DropdownMenuItem onClick={() => setShowCategoryModal(true)}>
+              <Plus className="h-4 w-4 mr-2" />
+              Add Category
+            </DropdownMenuItem>
+            <DropdownMenuItem>
+              <Eye className="h-4 w-4 mr-2" />
+              View All Categories
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
       </div>
 
       {/* Stats Cards */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-        <Card className="bg-gradient-to-br from-red-500 to-red-600 text-white border-2 shadow-xl">
+        <Card className="bg-destructive text-destructive-foreground border-2 shadow-lg">
           <CardContent className="p-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-red-100 text-sm font-medium">Total Expenses</p>
-                <p className="text-2xl font-bold">Rs. {summary.totalExpenses.toLocaleString()}</p>
+                <p className="text-destructive-foreground/80 text-sm font-medium">Total Expenses</p>
+                <p className="text-2xl font-bold">Rs. {(summary.totalExpenses || 0).toLocaleString()}</p>
               </div>
-              <div className="bg-red-400 bg-opacity-30 p-3 rounded-full">
+              <div className="bg-destructive-foreground/20 p-3 rounded-full">
                 <TrendingDown className="h-6 w-6" />
               </div>
             </div>
           </CardContent>
         </Card>
 
-        <Card className="bg-gradient-to-br from-orange-500 to-orange-600 text-white border-2 shadow-xl">
+        <Card className="bg-orange-500 text-white border-2 shadow-lg dark:bg-orange-600">
           <CardContent className="p-6">
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-orange-100 text-sm font-medium">This Month</p>
-                <p className="text-2xl font-bold">Rs. {thisMonthExpenses.toLocaleString()}</p>
+                <p className="text-2xl font-bold">Rs. {(thisMonthExpenses || 0).toLocaleString()}</p>
               </div>
-              <div className="bg-orange-400 bg-opacity-30 p-3 rounded-full">
+              <div className="bg-white/20 p-3 rounded-full">
                 <Calendar className="h-6 w-6" />
               </div>
             </div>
           </CardContent>
         </Card>
 
-        <Card className="bg-gradient-to-br from-yellow-500 to-yellow-600 text-white border-2 shadow-xl">
+        <Card className="bg-yellow-500 text-white border-2 shadow-lg dark:bg-yellow-600">
           <CardContent className="p-6">
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-yellow-100 text-sm font-medium">Today</p>
-                <p className="text-2xl font-bold">Rs. {todayExpenses.toLocaleString()}</p>
+                <p className="text-2xl font-bold">Rs. {(todayExpenses || 0).toLocaleString()}</p>
               </div>
-              <div className="bg-yellow-400 bg-opacity-30 p-3 rounded-full">
+              <div className="bg-white/20 p-3 rounded-full">
                 <TrendingUp className="h-6 w-6" />
               </div>
             </div>
           </CardContent>
         </Card>
 
-        <Card className="bg-gradient-to-br from-purple-500 to-purple-600 text-white border-2 shadow-xl">
+        <Card className="bg-primary text-primary-foreground border-2 shadow-lg">
           <CardContent className="p-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-purple-100 text-sm font-medium">Categories</p>
-                <p className="text-2xl font-bold">{summary.categories.length}</p>
+                <p className="text-primary-foreground/80 text-sm font-medium">Categories</p>
+                <p className="text-2xl font-bold">{(summary.expensesByCategory || []).length}</p>
               </div>
-              <div className="bg-purple-400 bg-opacity-30 p-3 rounded-full">
-                <Badge className="bg-purple-600">{expenses.length}</Badge>
+              <div className="bg-primary-foreground/20 p-3 rounded-full">
+                <Badge className="bg-primary-foreground/20 text-primary-foreground">{expenses.length}</Badge>
               </div>
             </div>
           </CardContent>
         </Card>
       </div>
 
-      {/* Charts Row */}
-      <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
-        {/* Category Expense Chart */}
-        <Card className=" shadow-xl border-2">
-          <CardHeader className="pb-4">
-            <CardTitle className="text-slate-500 flex items-center gap-2">
-              <div className="bg-blue-100 p-2 rounded-lg">
-                <TrendingDown className="h-5 w-5 text-blue-500" />
-              </div>
-              Expense by Category
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="h-80">
-              <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={summary.categories}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" />
-                  <XAxis dataKey="category" stroke="#64748b" fontSize={12} />
-                  <YAxis stroke="#64748b" fontSize={12} />
-                  <Tooltip 
-                    formatter={(value) => [`Rs. ${value.toLocaleString()}`, 'Amount']}
-                    contentStyle={{ 
-                      backgroundColor: '#fff', 
-                      border: 'none', 
-                      borderRadius: '8px', 
-                      boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' 
-                    }}
-                  />
-                  <Bar dataKey="amount" fill="#ef4444" radius={[4, 4, 0, 0]} />
-                </BarChart>
-              </ResponsiveContainer>
+      {/* Scheduled Expenses */}
+      <Card className="shadow-lg border">
+        <CardHeader className="pb-4">
+          <CardTitle className="text-foreground flex items-center gap-2">
+            <div className="bg-accent p-2 rounded-lg">
+              <Clock className="h-5 w-5 text-accent-foreground" />
             </div>
-          </CardContent>
-        </Card>
-
-        {/* Payment Methods Pie Chart */}
-        <Card className=" shadow-xl border-2">
-          <CardHeader className="pb-4">
-            <CardTitle className="text-slate-500 flex items-center gap-2">
-              <div className="bg-green-100 p-2 rounded-lg">
-                <Calendar className="h-5 w-5 text-green-600" />
-              </div>
-              Payment Methods
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="h-80">
-              <ResponsiveContainer width="100%" height="100%">
-                <PieChart>
-                  <Pie
-                    data={summary.paymentMethods}
-                    cx="50%"
-                    cy="50%"
-                    outerRadius={80}
-                    dataKey="amount"
-                    nameKey="method"
-                  >
-                    {summary.paymentMethods.map((entry, index) => (
-                      <Cell key={`cell-${index}`} fill={pieChartColors[index % pieChartColors.length]} />
-                    ))}
-                  </Pie>
-                  <Tooltip formatter={(value) => [`Rs. ${value.toLocaleString()}`, 'Amount']} />
-                </PieChart>
-              </ResponsiveContainer>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
+            Scheduled Expenses
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="text-center py-8 text-muted-foreground">
+            <Clock className="h-12 w-12 mx-auto mb-4 opacity-50" />
+            <p className="text-lg font-medium mb-2">No scheduled expenses</p>
+            <p className="text-sm">Use the "Schedule Expense" button to create recurring expenses.</p>
+          </div>
+        </CardContent>
+      </Card>
 
       {/* Expense Management */}
       <Card className=" shadow-xl border-2">
@@ -470,7 +452,7 @@ export default function ExpenseTracking() {
                       </Badge>
                     </TableCell>
                     <TableCell className="text-slate-700">{expense.description}</TableCell>
-                    <TableCell className="font-semibold text-red-600">Rs. {expense.amount.toLocaleString()}</TableCell>
+                    <TableCell className="font-semibold text-red-600">Rs. {(expense.amount || 0).toLocaleString()}</TableCell>
                     <TableCell className="text-slate-600">{expense.date}</TableCell>
                     <TableCell>
                       <div className="flex gap-2">
@@ -533,21 +515,38 @@ export default function ExpenseTracking() {
         </CardContent>
       </Card>
 
-      {/* Add/Edit Expense Modal */}
-      <ExpenseFormModal
-        open={showAddModal || !!editingExpense}
-        onOpenChange={(open) => {
-          if (!open) {
-            setShowAddModal(false);
-            setEditingExpense(null);
-          }
-        }}
-        expense={editingExpense}
-        onSubmit={editingExpense ? 
-          (data) => handleUpdateExpense(editingExpense.id, data) : 
-          handleCreateExpense
-        }
+      {/* Modals */}
+      <AddExpenseModal
+        open={showAddModal}
+        onOpenChange={setShowAddModal}
+        onExpenseAdded={fetchExpenses}
       />
+
+      <ScheduleExpenseModal
+        open={showScheduleModal}
+        onOpenChange={setShowScheduleModal}
+        onExpenseScheduled={fetchExpenses}
+      />
+
+      <AddExpenseCategoryModal
+        open={showCategoryModal}
+        onOpenChange={setShowCategoryModal}
+        onCategoryAdded={fetchExpenses}
+      />
+
+      {/* Edit Expense Modal */}
+      {editingExpense && (
+        <ExpenseFormModal
+          open={!!editingExpense}
+          onOpenChange={(open) => {
+            if (!open) {
+              setEditingExpense(null);
+            }
+          }}
+          expense={editingExpense}
+          onSubmit={(data) => handleUpdateExpense(editingExpense.id, data)}
+        />
+      )}
     </div>
   );
 }
@@ -567,6 +566,9 @@ const ExpenseFormModal = ({
     category: '',
     description: '',
     amount: '',
+    accountId: '',
+    payment_method: 'cash' as 'cash' | 'bank_transfer' | 'cheque',
+    reference: '',
     date: ''
   });
 
@@ -576,6 +578,9 @@ const ExpenseFormModal = ({
         category: expense.category,
         description: expense.description || '',
         amount: expense.amount.toString(),
+        accountId: '',
+        payment_method: expense.payment_method,
+        reference: expense.reference,
         date: expense.date
       });
     } else {
@@ -583,6 +588,9 @@ const ExpenseFormModal = ({
         category: '',
         description: '',
         amount: '',
+        accountId: '',
+        payment_method: 'cash',
+        reference: '',
         date: new Date().toLocaleDateString('en-GB')
       });
     }
@@ -593,11 +601,117 @@ const ExpenseFormModal = ({
     onSubmit({
       ...formData,
       amount: parseFloat(formData.amount),
-      payment_method: "cash",
-      reference: `EXP-${Date.now()}`,
-      receipt_url: ""
+      reference: formData.reference || `EXP-${Date.now()}`
     });
   };
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="max-w-md">
+        <DialogHeader>
+          <DialogTitle>{expense ? 'Edit Expense' : 'Add New Expense'}</DialogTitle>
+        </DialogHeader>
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <div className="space-y-2">
+            <Label htmlFor="category">Category</Label>
+            <Select onValueChange={(value) => setFormData({...formData, category: value})} value={formData.category}>
+              <SelectTrigger>
+                <SelectValue placeholder="Select category" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="office_supplies">Office Supplies</SelectItem>
+                <SelectItem value="transportation">Transportation</SelectItem>
+                <SelectItem value="utilities">Utilities</SelectItem>
+                <SelectItem value="marketing">Marketing</SelectItem>
+                <SelectItem value="equipment">Equipment</SelectItem>
+                <SelectItem value="maintenance">Maintenance</SelectItem>
+                <SelectItem value="insurance">Insurance</SelectItem>
+                <SelectItem value="professional_services">Professional Services</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="description">Description</Label>
+            <Input 
+              id="description"
+              placeholder="Expense description"
+              value={formData.description}
+              onChange={(e) => setFormData({...formData, description: e.target.value})}
+              required
+            />
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="amount">Amount (Rs.)</Label>
+            <Input 
+              id="amount"
+              type="number"
+              step="0.01"
+              placeholder="0.00"
+              value={formData.amount}
+              onChange={(e) => setFormData({...formData, amount: e.target.value})}
+              required
+            />
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="accountId">Debit from Account</Label>
+            <Select onValueChange={(value) => setFormData({...formData, accountId: value})} value={formData.accountId}>
+              <SelectTrigger>
+                <SelectValue placeholder="Select account" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="BA001">Main Business Account (BA001)</SelectItem>
+                <SelectItem value="CA001">Cash Register (CA001)</SelectItem>
+                <SelectItem value="SA001">Staff Salary Account (SA001)</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="payment_method">Payment Method</Label>
+            <Select onValueChange={(value: 'cash' | 'bank_transfer' | 'cheque') => setFormData({...formData, payment_method: value})} value={formData.payment_method}>
+              <SelectTrigger>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="cash">Cash</SelectItem>
+                <SelectItem value="bank_transfer">Bank Transfer</SelectItem>
+                <SelectItem value="cheque">Cheque</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="reference">Reference</Label>
+            <Input 
+              id="reference"
+              placeholder="Transaction reference"
+              value={formData.reference}
+              onChange={(e) => setFormData({...formData, reference: e.target.value})}
+            />
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="date">Date</Label>
+            <Input 
+              id="date"
+              type="date"
+              value={formData.date}
+              onChange={(e) => setFormData({...formData, date: e.target.value})}
+              required
+            />
+          </div>
+
+          <div className="flex gap-3 pt-4">
+            <Button type="submit" className="flex-1">{expense ? 'Update' : 'Add'} Expense</Button>
+            <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>Cancel</Button>
+          </div>
+        </form>
+      </DialogContent>
+    </Dialog>
+  );
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>

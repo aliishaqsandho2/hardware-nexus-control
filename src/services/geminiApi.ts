@@ -58,6 +58,7 @@ export class GeminiService {
       payload?: any;
     } | null;
     response: string;
+    quickOptions?: string[];
   }> {
     const systemPrompt = `You are an AI assistant for a business management system. 
 
@@ -76,10 +77,21 @@ Analyze the voice command and return a JSON response with:
     "method": "HTTP method",
     "payload": "request body if needed"
   },
-  "response": "friendly response to user"
+  "response": "friendly response to user with specific actionable suggestions",
+  "quickOptions": ["List of clickable options user can choose from"]
 }
 
-If you cannot determine a specific API call, set apiCall to null.
+IMPORTANT: Always include quickOptions array with 4-8 specific actionable items the user can click on.
+For example, if they ask about dashboard, include options like:
+- "Get Dashboard Stats"
+- "Get Enhanced Dashboard Stats" 
+- "Get Revenue Trend"
+- "Get Category Performance"
+- "Get Daily Sales"
+- "Get Inventory Status"
+
+Make sure quickOptions match actual API endpoint names when possible.
+If you cannot determine a specific API call, set apiCall to null but still provide quickOptions.
 
 Voice command: "${voiceText}"`;
 
@@ -115,7 +127,15 @@ Voice command: "${voiceText}"`;
         action: 'parse_error',
         parameters: {},
         apiCall: null,
-        response: 'I had trouble understanding your request. Please try again with a clearer command.'
+        response: 'I had trouble understanding your request. Please try again with a clearer command.',
+        quickOptions: [
+          "Get Dashboard Stats",
+          "List All Products", 
+          "List All Customers",
+          "Get Enhanced Dashboard Stats",
+          "Get Daily Sales",
+          "Show basic dashboard statistics"
+        ]
       };
     }
   }

@@ -81,7 +81,7 @@ export interface ScheduledExpense {
 }
 
 export const expenseApi = {
-  // Regular expense management - using /ims/v1/expenses endpoints
+  // Regular expense management - using /expenses endpoints
   getExpenses: (params?: {
     category?: string;
     account_id?: number;
@@ -98,11 +98,11 @@ export const expenseApi = {
       });
     }
     const query = queryParams.toString();
-    return apiRequest<ApiResponse<Expense[]>>(`/ims/v1/expenses${query ? `?${query}` : ''}`);
+    return apiRequest<ApiResponse<Expense[]>>(`/expenses${query ? `?${query}` : ''}`);
   },
 
   getExpense: (id: number) =>
-    apiRequest<ApiResponse<Expense>>(`/ims/v1/expenses/${id}`),
+    apiRequest<ApiResponse<Expense>>(`/expenses/${id}`),
 
   createExpense: (expense: {
     category: string;
@@ -115,19 +115,19 @@ export const expenseApi = {
     receipt_url?: string;
     created_by?: number;
   }) =>
-    apiRequest<ApiResponse<Expense>>('/ims/v1/expenses', {
+    apiRequest<ApiResponse<Expense>>('/expenses', {
       method: 'POST',
       body: JSON.stringify(expense),
     }),
 
   updateExpense: (id: number, expense: Partial<Expense>) =>
-    apiRequest<ApiResponse<Expense>>(`/ims/v1/expenses/${id}`, {
+    apiRequest<ApiResponse<Expense>>(`/expenses/${id}`, {
       method: 'PUT',
       body: JSON.stringify(expense),
     }),
 
   deleteExpense: (id: number) =>
-    apiRequest<ApiResponse<{ deleted: boolean }>>(`/ims/v1/expenses/${id}`, {
+    apiRequest<ApiResponse<{ deleted: boolean }>>(`/expenses/${id}`, {
       method: 'DELETE',
     }),
 
@@ -162,22 +162,22 @@ export const expenseApi = {
         amount: number;
         count: number;
       }>;
-    }>>(`/ims/v1/expenses/summary${query ? `?${query}` : ''}`);
+    }>>(`/expenses/summary${query ? `?${query}` : ''}`);
   },
 
   // Categories management
   getCategories: () =>
-    apiRequest<ApiResponse<string[]>>('/ims/v1/expenses/categories'),
+    apiRequest<ApiResponse<string[]>>('/expenses/categories'),
 
   createCategory: (category: string) =>
-    apiRequest<ApiResponse<{ category: string }>>('/ims/v1/expenses/categories', {
+    apiRequest<ApiResponse<{ category: string }>>('/expenses/categories', {
       method: 'POST',
       body: JSON.stringify({ category }),
     }),
 
   // Bulk operations
   bulkDeleteExpenses: (ids: number[]) =>
-    apiRequest<ApiResponse<{ message: string }>>('/ims/v1/expenses/bulk-delete', {
+    apiRequest<ApiResponse<{ message: string }>>('/expenses/bulk-delete', {
       method: 'POST',
       body: JSON.stringify({ ids }),
     }),
@@ -202,10 +202,10 @@ export const expenseApi = {
         total_records: number;
         exported_at: string;
       };
-    }>>(`/ims/v1/expenses/export${query ? `?${query}` : ''}`);
+    }>>(`/expenses/export${query ? `?${query}` : ''}`);
   },
 
-  // Scheduled expenses management - using /ims/v1/finance/expenses/scheduled endpoints
+  // Scheduled expenses management - using /finance/expenses/scheduled endpoints
   getScheduledExpenses: (params?: {
     status?: 'active' | 'paused' | 'inactive';
     category?: string;
@@ -220,7 +220,7 @@ export const expenseApi = {
       });
     }
     const query = queryParams.toString();
-    return apiRequest<ApiResponse<ScheduledExpense[]>>(`/ims/v1/finance/expenses/scheduled${query ? `?${query}` : ''}`);
+    return apiRequest<ApiResponse<ScheduledExpense[]>>(`/finance/expenses/scheduled${query ? `?${query}` : ''}`);
   },
 
   createScheduledExpense: (scheduledExpense: {
@@ -232,25 +232,25 @@ export const expenseApi = {
     account_id?: number;
     payment_method: 'cash' | 'bank_transfer' | 'cheque';
   }) =>
-    apiRequest<ApiResponse<ScheduledExpense>>('/ims/v1/finance/expenses/scheduled', {
+    apiRequest<ApiResponse<ScheduledExpense>>('/finance/expenses/scheduled', {
       method: 'POST',
       body: JSON.stringify(scheduledExpense),
     }),
 
   updateScheduledExpense: (id: number, scheduledExpense: Partial<ScheduledExpense>) =>
-    apiRequest<ApiResponse<ScheduledExpense>>(`/ims/v1/finance/expenses/scheduled/${id}`, {
+    apiRequest<ApiResponse<ScheduledExpense>>(`/finance/expenses/scheduled/${id}`, {
       method: 'PUT',
       body: JSON.stringify(scheduledExpense),
     }),
 
   updateScheduledExpenseStatus: (id: number, status: 'active' | 'paused' | 'inactive') =>
-    apiRequest<ApiResponse<{ id: number; status: string; updated_at: string }>>(`/ims/v1/finance/expenses/scheduled/${id}/status`, {
+    apiRequest<ApiResponse<{ id: number; status: string; updated_at: string }>>(`/finance/expenses/scheduled/${id}/status`, {
       method: 'PUT',
       body: JSON.stringify({ status }),
     }),
 
   deleteScheduledExpense: (id: number) =>
-    apiRequest<ApiResponse<{ deleted: boolean }>>(`/ims/v1/finance/expenses/scheduled/${id}`, {
+    apiRequest<ApiResponse<{ deleted: boolean }>>(`/finance/expenses/scheduled/${id}`, {
       method: 'DELETE',
     }),
 
@@ -265,7 +265,7 @@ export const expenseApi = {
       next_execution: string;
       days_until: number;
       frequency: string;
-    }>>>(`/ims/v1/finance/expenses/scheduled/next-executions${query ? `?${query}` : ''}`);
+    }>>>(`/finance/expenses/scheduled/next-executions${query ? `?${query}` : ''}`);
   },
 
   executeScheduledExpense: (id: number) =>
@@ -275,7 +275,7 @@ export const expenseApi = {
       executed_at: string;
       next_execution: string;
       execution_count: number;
-    }>>(`/ims/v1/finance/expenses/scheduled/${id}/execute`, {
+    }>>(`/finance/expenses/scheduled/${id}/execute`, {
       method: 'POST',
     }),
 };

@@ -49,7 +49,7 @@ export default function AddExpenseCategoryModal({ open, onOpenChange, onCategory
     setLoading(true);
 
     try {
-      const response = await fetch(`${apiConfig.getBaseUrl()}/ims/v1/expenses/categories`, {
+      const response = await fetch(`${apiConfig.getBaseUrl()}/expenses/categories`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

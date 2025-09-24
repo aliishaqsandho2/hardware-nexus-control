@@ -1,13 +1,11 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { Label } from "@/components/ui/label";
+import { SidebarTrigger } from "@/components/ui/sidebar";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Textarea } from "@/components/ui/textarea";
 import { 
   Users, 
   Plus, 
@@ -23,7 +21,8 @@ import {
   UserCheck,
   Clock,
   DollarSign,
-  Award
+  Award,
+  RefreshCw
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import {
@@ -32,110 +31,50 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import EmployeeFormModal, { type Employee } from "@/components/EmployeeFormModal";
 
-interface Employee {
-  id: number;
-  name: string;
-  email: string;
-  phone: string;
-  position: string;
-  department: string;
-  salary: number;
-  joinDate: string;
-  status: 'active' | 'inactive' | 'on_leave';
-  avatar?: string;
-  address: string;
-  experience: string;
-}
+// Employee interface is now imported from the modal component
 
 export default function Employees() {
   const { toast } = useToast();
   const [searchTerm, setSearchTerm] = useState("");
   const [filterDepartment, setFilterDepartment] = useState("all");
-  const [isAddModalOpen, setIsAddModalOpen] = useState(false);
+  const [isFormModalOpen, setIsFormModalOpen] = useState(false);
   const [editingEmployee, setEditingEmployee] = useState<Employee | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [submitting, setSubmitting] = useState(false);
 
-  const [employees, setEmployees] = useState<Employee[]>([
-    {
-      id: 1,
-      name: "Ahmad Ali",
-      email: "ahmad.ali@hardware.com",
-      phone: "+92 300 111 2222",
-      position: "Sales Manager",
-      department: "Sales",
-      salary: 85000,
-      joinDate: "2023-01-15",
-      status: "active",
-      address: "Model Town, Lahore",
-      experience: "5 years"
-    },
-    {
-      id: 2,
-      name: "Fatima Khan",
-      email: "fatima.khan@hardware.com", 
-      phone: "+92 301 333 4444",
-      position: "Inventory Manager",
-      department: "Operations",
-      salary: 75000,
-      joinDate: "2023-03-20",
-      status: "active",
-      address: "DHA Phase 3, Lahore",
-      experience: "3 years"
-    },
-    {
-      id: 3,
-      name: "Hassan Shah",
-      email: "hassan.shah@hardware.com",
-      phone: "+92 302 555 6666", 
-      position: "Accountant",
-      department: "Finance",
-      salary: 60000,
-      joinDate: "2023-06-10",
-      status: "on_leave",
-      address: "Johar Town, Lahore",
-      experience: "4 years"
-    },
-    {
-      id: 4,
-      name: "Ayesha Ahmed",
-      email: "ayesha.ahmed@hardware.com",
-      phone: "+92 303 777 8888",
-      position: "Customer Service Representative",
-      department: "Customer Service",
-      salary: 45000,
-      joinDate: "2023-08-25",
-      status: "active",
-      address: "Gulberg II, Lahore",
-      experience: "2 years"
-    },
-    {
-      id: 5,
-      name: "Muhammad Tariq",
-      email: "m.tariq@hardware.com",
-      phone: "+92 304 999 0000",
-      position: "Warehouse Supervisor",
-      department: "Operations",
-      salary: 55000,
-      joinDate: "2022-11-12",
-      status: "inactive",
-      address: "Wapda Town, Lahore",
-      experience: "6 years"
+  const [employees, setEmployees] = useState<Employee[]>([]);
+
+  // Removed newEmployee state - now handled by the modal
+
+  const departments = ["Sales", "Operations", "Finance", "Customer Service", "IT", "HR", "Marketing", "Administration"];
+
+  useEffect(() => {
+    fetchEmployees();
+  }, []);
+
+  const fetchEmployees = async () => {
+    try {
+      setLoading(true);
+      const response = await fetch('/wp-json/ims/v1/employees');
+      if (response.ok) {
+        const data = await response.json();
+        if (data.success) {
+          setEmployees(data.data || []);
+        }
+      }
+    } catch (error) {
+      console.error('Error fetching employees:', error);
+      toast({
+        title: "Error",
+        description: "Failed to load employees",
+        variant: "destructive",
+      });
+    } finally {
+      setLoading(false);
     }
-  ]);
-
-  const [newEmployee, setNewEmployee] = useState<Partial<Employee>>({
-    name: "",
-    email: "",
-    phone: "",
-    position: "",
-    department: "",
-    salary: 0,
-    address: "",
-    experience: "",
-    status: "active"
-  });
-
-  const departments = ["Sales", "Operations", "Finance", "Customer Service", "IT", "HR"];
+  };
 
   const filteredEmployees = employees.filter(employee => {
     const matchesSearch = employee.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -147,51 +86,110 @@ export default function Employees() {
     return matchesSearch && matchesDepartment;
   });
 
-  const handleAddEmployee = () => {
-    if (!newEmployee.name || !newEmployee.email || !newEmployee.position) {
+  const handleSubmitEmployee = async (employeeData: Employee) => {
+    try {
+      setSubmitting(true);
+      
+      if (editingEmployee) {
+        // Update existing employee
+        const response = await fetch(`/wp-json/ims/v1/employees/${editingEmployee.id}`, {
+          method: 'PUT',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(employeeData),
+        });
+
+        if (response.ok) {
+          const data = await response.json();
+          if (data.success) {
+            setEmployees(prev => prev.map(emp => 
+              emp.id === editingEmployee.id ? { ...employeeData, id: editingEmployee.id } : emp
+            ));
+            toast({
+              title: "Success",
+              description: `${employeeData.name} has been updated successfully`,
+            });
+            setEditingEmployee(null);
+          }
+        } else {
+          throw new Error('Failed to update employee');
+        }
+      } else {
+        // Create new employee
+        const response = await fetch('/wp-json/ims/v1/employees', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(employeeData),
+        });
+
+        if (response.ok) {
+          const data = await response.json();
+          if (data.success) {
+            setEmployees(prev => [...prev, data.data]);
+            toast({
+              title: "Success",
+              description: `${employeeData.name} has been added to the team`,
+            });
+          }
+        } else {
+          throw new Error('Failed to create employee');
+        }
+      }
+    } catch (error) {
+      console.error('Error submitting employee:', error);
       toast({
         title: "Error",
-        description: "Please fill in all required fields",
+        description: editingEmployee ? "Failed to update employee" : "Failed to add employee",
         variant: "destructive",
       });
-      return;
+      throw error; // Re-throw to prevent modal from closing
+    } finally {
+      setSubmitting(false);
     }
-
-    const employee: Employee = {
-      ...newEmployee as Employee,
-      id: Math.max(...employees.map(e => e.id)) + 1,
-      joinDate: new Date().toISOString().split('T')[0]
-    };
-
-    setEmployees([...employees, employee]);
-    setNewEmployee({
-      name: "",
-      email: "",
-      phone: "",
-      position: "",
-      department: "",
-      salary: 0,
-      address: "",
-      experience: "",
-      status: "active"
-    });
-    setIsAddModalOpen(false);
-    
-    toast({
-      title: "Success",
-      description: `${employee.name} has been added to the team`,
-    });
   };
 
-  const handleDeleteEmployee = (id: number) => {
+  const handleDeleteEmployee = async (id: number) => {
     const employee = employees.find(e => e.id === id);
-    if (employee && confirm(`Are you sure you want to remove ${employee.name}?`)) {
-      setEmployees(employees.filter(e => e.id !== id));
+    if (!employee || !confirm(`Are you sure you want to remove ${employee.name}?`)) return;
+
+    try {
+      const response = await fetch(`/wp-json/ims/v1/employees/${id}`, {
+        method: 'DELETE',
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        if (data.success) {
+          setEmployees(employees.filter(e => e.id !== id));
+          toast({
+            title: "Employee Removed",
+            description: `${employee.name} has been removed from the team`,
+          });
+        }
+      } else {
+        throw new Error('Failed to delete employee');
+      }
+    } catch (error) {
+      console.error('Error deleting employee:', error);
       toast({
-        title: "Employee Removed",
-        description: `${employee.name} has been removed from the team`,
+        title: "Error",
+        description: "Failed to delete employee",
+        variant: "destructive",
       });
     }
+  };
+
+  const handleEditEmployee = (employee: Employee) => {
+    setEditingEmployee(employee);
+    setIsFormModalOpen(true);
+  };
+
+  const handleCreateEmployee = () => {
+    setEditingEmployee(null);
+    setIsFormModalOpen(true);
   };
 
   const getStatusBadge = (status: Employee['status']) => {
@@ -220,122 +218,39 @@ export default function Employees() {
     count: employees.filter(e => e.department === dept).length
   }));
 
-  return (
-    <div className="p-3 space-y-3 min-h-[calc(100vh-65px)] bg-gradient-to-br from-slate-50 to-blue-50">
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-8">
-        <div>
-          <h1 className="text-3xl font-bold bg-gradient-to-r from-primary to-primary/80 bg-clip-text text-transparent">
-            Employee Management
-          </h1>
-          <p className="text-muted-foreground mt-1">Manage your team and workforce</p>
+  if (loading) {
+    return (
+      <div className="flex-1 p-6 space-y-6 bg-background min-h-screen">
+        <div className="flex items-center justify-center h-64">
+          <div className="flex gap-3 items-center text-lg text-muted-foreground">
+            <RefreshCw className="animate-spin h-6 w-6" />
+            Loading employees...
+          </div>
         </div>
-        <Dialog open={isAddModalOpen} onOpenChange={setIsAddModalOpen}>
-          <DialogTrigger asChild>
-            <Button className="bg-primary hover:bg-primary/90 gap-2">
-              <Plus className="h-4 w-4" />
-              Add Employee
-            </Button>
-          </DialogTrigger>
-          <DialogContent className="max-w-2xl">
-            <DialogHeader>
-              <DialogTitle>Add New Employee</DialogTitle>
-            </DialogHeader>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label>Full Name *</Label>
-                <Input
-                  value={newEmployee.name}
-                  onChange={(e) => setNewEmployee({...newEmployee, name: e.target.value})}
-                  placeholder="Enter full name"
-                />
-              </div>
-              <div className="space-y-2">
-                <Label>Email Address *</Label>
-                <Input
-                  type="email"
-                  value={newEmployee.email}
-                  onChange={(e) => setNewEmployee({...newEmployee, email: e.target.value})}
-                  placeholder="employee@hardware.com"
-                />
-              </div>
-              <div className="space-y-2">
-                <Label>Phone Number</Label>
-                <Input
-                  value={newEmployee.phone}
-                  onChange={(e) => setNewEmployee({...newEmployee, phone: e.target.value})}
-                  placeholder="+92 300 123 4567"
-                />
-              </div>
-              <div className="space-y-2">
-                <Label>Position *</Label>
-                <Input
-                  value={newEmployee.position}
-                  onChange={(e) => setNewEmployee({...newEmployee, position: e.target.value})}
-                  placeholder="Job title"
-                />
-              </div>
-              <div className="space-y-2">
-                <Label>Department</Label>
-                <Select value={newEmployee.department} onValueChange={(value) => setNewEmployee({...newEmployee, department: value})}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select department" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {departments.map(dept => (
-                      <SelectItem key={dept} value={dept}>{dept}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="space-y-2">
-                <Label>Monthly Salary (Rs.)</Label>
-                <Input
-                  type="number"
-                  value={newEmployee.salary}
-                  onChange={(e) => setNewEmployee({...newEmployee, salary: parseInt(e.target.value) || 0})}
-                  placeholder="50000"
-                />
-              </div>
-              <div className="space-y-2 md:col-span-2">
-                <Label>Address</Label>
-                <Textarea
-                  value={newEmployee.address}
-                  onChange={(e) => setNewEmployee({...newEmployee, address: e.target.value})}
-                  placeholder="Employee address"
-                />
-              </div>
-              <div className="space-y-2">
-                <Label>Experience</Label>
-                <Input
-                  value={newEmployee.experience}
-                  onChange={(e) => setNewEmployee({...newEmployee, experience: e.target.value})}
-                  placeholder="e.g., 3 years"
-                />
-              </div>
-              <div className="space-y-2">
-                <Label>Status</Label>
-                <Select value={newEmployee.status} onValueChange={(value: any) => setNewEmployee({...newEmployee, status: value})}>
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="active">Active</SelectItem>
-                    <SelectItem value="inactive">Inactive</SelectItem>
-                    <SelectItem value="on_leave">On Leave</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
-            <div className="flex gap-3 pt-4">
-              <Button onClick={handleAddEmployee} className="bg-primary hover:bg-primary/90">
-                Add Employee
-              </Button>
-              <Button variant="outline" onClick={() => setIsAddModalOpen(false)}>
-                Cancel
-              </Button>
-            </div>
-          </DialogContent>
-        </Dialog>
+      </div>
+    );
+  }
+
+  return (
+    <div className="flex-1 p-4 md:p-6 space-y-6 bg-background min-h-[calc(100vh-65px)]">
+      <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+        <div className="flex items-center gap-4">
+          <SidebarTrigger />
+          <div>
+            <h1 className="text-3xl font-bold text-foreground">Employee Management</h1>
+            <p className="text-muted-foreground">Manage your team and workforce</p>
+          </div>
+        </div>
+        <div className="flex gap-2">
+          <Button variant="outline" onClick={fetchEmployees} className="bg-card shadow-sm hover:bg-accent">
+            <RefreshCw className="h-4 w-4 mr-2" />
+            Refresh
+          </Button>
+          <Button onClick={handleCreateEmployee} className="bg-primary hover:bg-primary/90 gap-2">
+            <Plus className="h-4 w-4" />
+            Add Employee
+          </Button>
+        </div>
       </div>
 
       {/* Stats Cards */}
@@ -446,7 +361,7 @@ export default function Employees() {
                         </Button>
                       </DropdownMenuTrigger>
                       <DropdownMenuContent>
-                        <DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => handleEditEmployee(employee)}>
                           <Edit2 className="h-4 w-4 mr-2" />
                           Edit
                         </DropdownMenuItem>
@@ -508,6 +423,15 @@ export default function Employees() {
           )}
         </CardContent>
       </Card>
+
+      {/* Employee Form Modal */}
+      <EmployeeFormModal
+        open={isFormModalOpen}
+        onOpenChange={setIsFormModalOpen}
+        employee={editingEmployee}
+        onSubmit={handleSubmitEmployee}
+        mode={editingEmployee ? 'edit' : 'create'}
+      />
     </div>
   );
 }

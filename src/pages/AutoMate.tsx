@@ -110,7 +110,7 @@ const AutoMate = () => {
     {
       id: 1,
       type: 'ai',
-      content: 'Hi! I\'m your business automation assistant. I can help you with everything from checking sales reports to managing inventory, customers, and finances. What would you like me to help you with today?\n\nClick on any category above or try these quick actions:\n• Get Dashboard Stats\n• List All Products\n• List All Customers\n• Get Enhanced Dashboard Stats\n• Get Daily Sales\n• Show basic dashboard statistics',
+      content: 'Hi! I\'m your business automation assistant. I can help you with everything from checking sales reports to managing inventory, customers, and finances. What would you like me to help you with today?\n\nSelect any category above to get started, or simply describe what you need assistance with.',
       timestamp: new Date()
     }
   ]);
@@ -145,17 +145,9 @@ const AutoMate = () => {
 
   // Initialize quick options on component mount
   React.useEffect(() => {
-    // Set initial quick options from the welcome message
-    const initialOptions = [
-      "Get Dashboard Stats",
-      "List All Products", 
-      "List All Customers",
-      "Get Enhanced Dashboard Stats",
-      "Get Daily Sales",
-      "Show basic dashboard statistics"
-    ];
-    setQuickOptions(initialOptions);
-    setShowQuickOptions(true);
+    // Keep quick options empty for cleaner interface
+    setQuickOptions([]);
+    setShowQuickOptions(false);
   }, []);
 
   // Generate quick actions from API categories
@@ -975,21 +967,7 @@ Just tell me what you need in simple terms!`;
                   <MessageSquare className="h-5 w-5" />
                   AI Assistant - Comprehensive Business API Access
                 </CardTitle>
-                <CardContent className='flex justify-start gap-2 p-0 flex-wrap'>
-                  {quickActions.map((action, index) => (
-                    <Button
-                      key={index}
-                      variant={selectedAction === action.action ? "default" : "outline"}
-                      size="sm"
-                      onClick={() => handleActionSelect(action.action)}
-                    >
-                      <div className="flex items-center gap-1">
-                        <action.icon className="h-3 w-3" />
-                        <div className="text-xs font-medium">{action.title}</div>
-                      </div>
-                    </Button>
-                  ))}
-                </CardContent>
+                {/* Removed quick action buttons as requested */}
               </CardHeader>
             <CardContent className="space-y-4">
               {/* Messages Area */}

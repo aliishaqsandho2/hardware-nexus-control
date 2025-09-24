@@ -48,7 +48,7 @@ export default function AddExpenseCategoryModal({ open, onOpenChange, onCategory
     setLoading(true);
 
     try {
-      const response = await fetch('https://usmanhardware.site/wp-json/ims/v1/finance/expense-categories', {
+      const response = await fetch('https://aliishaq.site/wp-json/ims/v1/finance/expense-categories', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

@@ -51,7 +51,7 @@ const Finance = () => {
         budgetRes,
         taxRes
       ] = await Promise.allSettled([
-        financeApi.getOverview(period),
+        financeApi.getOverview(),
         financeApi.getAccountsReceivable({ limit: 10 }),
         financeApi.getAccountsPayable(),
         financeApi.getCashFlowTransactions({ per_page: 10 }),
@@ -66,9 +66,12 @@ const Finance = () => {
         setOverview(overviewRes.value.data);
       }
 
-      // Process receivables data
+      // Process receivables data  
       if (receivablesRes.status === 'fulfilled' && receivablesRes.value.success) {
-        setReceivables(receivablesRes.value.data.receivables || []);
+        const receivablesData = receivablesRes.value.data;
+        if (receivablesData && receivablesData.receivables) {
+          setReceivables(receivablesData.receivables);
+        }
       }
 
       // Process payables data

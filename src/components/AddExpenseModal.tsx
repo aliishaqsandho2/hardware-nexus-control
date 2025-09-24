@@ -89,10 +89,13 @@ export default function AddExpenseModal({ open, onOpenChange, onExpenseAdded, ex
     try {
       const response = await accountsApi.getAccounts({ active: true });
       if (response.success) {
-        setAccounts(response.data);
+        setAccounts(Array.isArray(response.data) ? response.data : []);
+      } else {
+        setAccounts([]);
       }
     } catch (error) {
       console.error('Error fetching accounts:', error);
+      setAccounts([]); // Ensure accounts is always an array
     }
   };
 

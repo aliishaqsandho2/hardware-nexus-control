@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { format } from "date-fns";
 import { CalendarIcon, Clock } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -11,6 +11,8 @@ import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { useToast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
+import { expenseApi } from "@/services/expenseApi";
+import { accountsApi } from "@/services/accountsApi";
 
 interface ScheduleExpenseModalProps {
   open: boolean;
@@ -22,6 +24,8 @@ export default function ScheduleExpenseModal({ open, onOpenChange, onExpenseSche
   const { toast } = useToast();
   const [loading, setLoading] = useState(false);
   const [startDate, setStartDate] = useState<Date>();
+  const [accounts, setAccounts] = useState<any[]>([]);
+  const [categories, setCategories] = useState<string[]>([]);
   const [formData, setFormData] = useState({
     category: "",
     description: "",
@@ -31,7 +35,7 @@ export default function ScheduleExpenseModal({ open, onOpenChange, onExpenseSche
     paymentMethod: "cash" as "cash" | "bank_transfer" | "cheque"
   });
 
-  const categories = [
+  const defaultCategories = [
     "Purchases",
     "Rent", 
     "Utilities",
@@ -41,15 +45,48 @@ export default function ScheduleExpenseModal({ open, onOpenChange, onExpenseSche
     "Equipment",
     "Insurance",
     "Professional Services",
+    "Staff Salaries",
+    "Maintenance",
+    "Legal & Professional",
+    "Bank Charges",
+    "Interest",
     "Other"
   ];
 
-  const accounts = [
-    { id: "BA001", name: "Main Business Account (BA001)" },
-    { id: "CA001", name: "Cash Register (CA001)" },
-    { id: "SA001", name: "Staff Salary Account (SA001)" },
-    { id: "PA001", name: "Petty Cash Account (PA001)" }
-  ];
+  // Fetch data when modal opens
+  useEffect(() => {
+    if (open) {
+      fetchAccounts();
+      fetchCategories();
+    }
+  }, [open]);
+
+  const fetchAccounts = async () => {
+    try {
+      const response = await accountsApi.getAccounts({ active: true });
+      if (response.success) {
+        setAccounts(Array.isArray(response.data) ? response.data : []);
+      }
+    } catch (error) {
+      console.error('Error fetching accounts:', error);
+      setAccounts([]);
+    }
+  };
+
+  const fetchCategories = async () => {
+    try {
+      const response = await expenseApi.getCategories();
+      if (response.success) {
+        const apiCategories = response.data;
+        setCategories([...new Set([...defaultCategories, ...apiCategories])]);
+      } else {
+        setCategories(defaultCategories);
+      }
+    } catch (error) {
+      console.error('Error fetching categories:', error);
+      setCategories(defaultCategories);
+    }
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -68,27 +105,17 @@ export default function ScheduleExpenseModal({ open, onOpenChange, onExpenseSche
     try {
       const formattedDate = format(startDate, "yyyy-MM-dd");
       
-      const response = await fetch('https://aliishaq.site/wp-json/ims/v1/finance/scheduled-expenses', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          category: formData.category,
-          description: formData.description,
-          amount: parseFloat(formData.amount),
-          accountId: formData.accountId,
-          frequency: formData.frequency,
-          startDate: formattedDate,
-          paymentMethod: formData.paymentMethod,
-          reference: `SCH-EXP-${Date.now()}`,
-          status: "active"
-        })
+      const response = await expenseApi.createScheduledExpense({
+        category: formData.category,
+        description: formData.description,
+        amount: parseFloat(formData.amount),
+        frequency: formData.frequency as any,
+        start_date: formattedDate,
+        account_id: parseInt(formData.accountId),
+        payment_method: formData.paymentMethod
       });
 
-      const result = await response.json();
-
-      if (response.ok && result.success) {
+      if (response.success) {
         toast({
           title: "Success",
           description: "Expense scheduled successfully",
@@ -108,7 +135,7 @@ export default function ScheduleExpenseModal({ open, onOpenChange, onExpenseSche
         onExpenseScheduled();
         onOpenChange(false);
       } else {
-        throw new Error(result.message || 'Failed to schedule expense');
+        throw new Error(response.message || 'Failed to schedule expense');
       }
     } catch (error) {
       console.error('Error scheduling expense:', error);
@@ -201,8 +228,8 @@ export default function ScheduleExpenseModal({ open, onOpenChange, onExpenseSche
                 </SelectTrigger>
                 <SelectContent>
                   {accounts.map((account) => (
-                    <SelectItem key={account.id} value={account.id}>
-                      {account.name}
+                    <SelectItem key={account.id} value={account.id.toString()}>
+                      {account.account_name}
                     </SelectItem>
                   ))}
                 </SelectContent>

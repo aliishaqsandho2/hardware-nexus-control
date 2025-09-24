@@ -4,21 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Calendar, Clock, Repeat, Edit2, Trash2, Play, Pause } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
-
-export interface ScheduledExpense {
-  id: number;
-  category: string;
-  description: string;
-  amount: number;
-  frequency: 'daily' | 'weekly' | 'monthly' | 'yearly';
-  next_execution: string;
-  status: 'active' | 'paused' | 'inactive';
-  account_id?: number;
-  payment_method: string;
-  created_at: string;
-  last_executed?: string;
-  execution_count?: number;
-}
+import { expenseApi, type ScheduledExpense } from "@/services/expenseApi";
 
 interface ScheduledExpensesListProps {
   onEdit?: (expense: ScheduledExpense) => void;
@@ -38,13 +24,9 @@ export default function ScheduledExpensesList({ onEdit, onToggleStatus, onDelete
   const fetchScheduledExpenses = async () => {
     try {
       setLoading(true);
-      // API call to fetch scheduled expenses
-      const response = await fetch('/wp-json/ims/v1/finance/expenses/scheduled');
-      if (response.ok) {
-        const data = await response.json();
-        if (data.success) {
-          setScheduledExpenses(data.data || []);
-        }
+      const response = await expenseApi.getScheduledExpenses();
+      if (response.success) {
+        setScheduledExpenses(Array.isArray(response.data) ? response.data : []);
       }
     } catch (error) {
       console.error('Error fetching scheduled expenses:', error);
@@ -61,28 +43,18 @@ export default function ScheduledExpensesList({ onEdit, onToggleStatus, onDelete
   const handleToggleStatus = async (id: number, currentStatus: string) => {
     const newStatus = currentStatus === 'active' ? 'paused' : 'active';
     try {
-      const response = await fetch(`/wp-json/ims/v1/finance/expenses/scheduled/${id}/status`, {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ status: newStatus }),
-      });
-
-      if (response.ok) {
-        const data = await response.json();
-        if (data.success) {
-          setScheduledExpenses(prev => 
-            prev.map(expense => 
-              expense.id === id ? { ...expense, status: newStatus as any } : expense
-            )
-          );
-          toast({
-            title: "Status Updated",
-            description: `Scheduled expense ${newStatus === 'active' ? 'activated' : 'paused'}`,
-          });
-          if (onToggleStatus) onToggleStatus(id, newStatus as any);
-        }
+      const response = await expenseApi.updateScheduledExpenseStatus(id, newStatus as any);
+      if (response.success) {
+        setScheduledExpenses(prev => 
+          prev.map(expense => 
+            expense.id === id ? { ...expense, status: newStatus as any } : expense
+          )
+        );
+        toast({
+          title: "Status Updated",
+          description: `Scheduled expense ${newStatus === 'active' ? 'activated' : 'paused'}`,
+        });
+        if (onToggleStatus) onToggleStatus(id, newStatus as any);
       }
     } catch (error) {
       console.error('Error updating scheduled expense status:', error);
@@ -98,20 +70,14 @@ export default function ScheduledExpensesList({ onEdit, onToggleStatus, onDelete
     if (!confirm('Are you sure you want to delete this scheduled expense?')) return;
 
     try {
-      const response = await fetch(`/wp-json/ims/v1/finance/expenses/scheduled/${id}`, {
-        method: 'DELETE',
-      });
-
-      if (response.ok) {
-        const data = await response.json();
-        if (data.success) {
-          setScheduledExpenses(prev => prev.filter(expense => expense.id !== id));
-          toast({
-            title: "Deleted",
-            description: "Scheduled expense deleted successfully",
-          });
-          if (onDelete) onDelete(id);
-        }
+      const response = await expenseApi.deleteScheduledExpense(id);
+      if (response.success) {
+        setScheduledExpenses(prev => prev.filter(expense => expense.id !== id));
+        toast({
+          title: "Deleted",
+          description: "Scheduled expense deleted successfully",
+        });
+        if (onDelete) onDelete(id);
       }
     } catch (error) {
       console.error('Error deleting scheduled expense:', error);

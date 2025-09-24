@@ -205,7 +205,7 @@ export const expenseApi = {
     }>>(`/ims/v1/expenses/export${query ? `?${query}` : ''}`);
   },
 
-  // Scheduled expenses management - using /wp-json/ims/v1/finance/expenses/scheduled endpoints
+  // Scheduled expenses management - using /ims/v1/finance/expenses/scheduled endpoints
   getScheduledExpenses: (params?: {
     status?: 'active' | 'paused' | 'inactive';
     category?: string;
@@ -220,7 +220,7 @@ export const expenseApi = {
       });
     }
     const query = queryParams.toString();
-    return apiRequest<ApiResponse<ScheduledExpense[]>>(`/wp-json/ims/v1/finance/expenses/scheduled${query ? `?${query}` : ''}`);
+    return apiRequest<ApiResponse<ScheduledExpense[]>>(`/ims/v1/finance/expenses/scheduled${query ? `?${query}` : ''}`);
   },
 
   createScheduledExpense: (scheduledExpense: {
@@ -232,25 +232,25 @@ export const expenseApi = {
     account_id?: number;
     payment_method: 'cash' | 'bank_transfer' | 'cheque';
   }) =>
-    apiRequest<ApiResponse<ScheduledExpense>>('/wp-json/ims/v1/finance/expenses/scheduled', {
+    apiRequest<ApiResponse<ScheduledExpense>>('/ims/v1/finance/expenses/scheduled', {
       method: 'POST',
       body: JSON.stringify(scheduledExpense),
     }),
 
   updateScheduledExpense: (id: number, scheduledExpense: Partial<ScheduledExpense>) =>
-    apiRequest<ApiResponse<ScheduledExpense>>(`/wp-json/ims/v1/finance/expenses/scheduled/${id}`, {
+    apiRequest<ApiResponse<ScheduledExpense>>(`/ims/v1/finance/expenses/scheduled/${id}`, {
       method: 'PUT',
       body: JSON.stringify(scheduledExpense),
     }),
 
   updateScheduledExpenseStatus: (id: number, status: 'active' | 'paused' | 'inactive') =>
-    apiRequest<ApiResponse<{ id: number; status: string; updated_at: string }>>(`/wp-json/ims/v1/finance/expenses/scheduled/${id}/status`, {
+    apiRequest<ApiResponse<{ id: number; status: string; updated_at: string }>>(`/ims/v1/finance/expenses/scheduled/${id}/status`, {
       method: 'PUT',
       body: JSON.stringify({ status }),
     }),
 
   deleteScheduledExpense: (id: number) =>
-    apiRequest<ApiResponse<{ deleted: boolean }>>(`/wp-json/ims/v1/finance/expenses/scheduled/${id}`, {
+    apiRequest<ApiResponse<{ deleted: boolean }>>(`/ims/v1/finance/expenses/scheduled/${id}`, {
       method: 'DELETE',
     }),
 
@@ -265,7 +265,7 @@ export const expenseApi = {
       next_execution: string;
       days_until: number;
       frequency: string;
-    }>>>(`/wp-json/ims/v1/finance/expenses/scheduled/next-executions${query ? `?${query}` : ''}`);
+    }>>>(`/ims/v1/finance/expenses/scheduled/next-executions${query ? `?${query}` : ''}`);
   },
 
   executeScheduledExpense: (id: number) =>
@@ -275,7 +275,7 @@ export const expenseApi = {
       executed_at: string;
       next_execution: string;
       execution_count: number;
-    }>>(`/wp-json/ims/v1/finance/expenses/scheduled/${id}/execute`, {
+    }>>(`/ims/v1/finance/expenses/scheduled/${id}/execute`, {
       method: 'POST',
     }),
 };

@@ -6,6 +6,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
+import { apiConfig } from "@/utils/apiConfig";
 
 interface AddExpenseCategoryModalProps {
   open: boolean;
@@ -48,7 +49,7 @@ export default function AddExpenseCategoryModal({ open, onOpenChange, onCategory
     setLoading(true);
 
     try {
-      const response = await fetch('https://aliishaq.site/wp-json/ims/v1/finance/expense-categories', {
+      const response = await fetch(`${apiConfig.getBaseUrl()}/ims/v1/expenses/categories`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

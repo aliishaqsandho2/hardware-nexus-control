@@ -32,6 +32,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import EmployeeFormModal, { type Employee } from "@/components/EmployeeFormModal";
+import { employeesApi } from "@/services/api";
 
 // Employee interface is now imported from the modal component
 
@@ -57,12 +58,9 @@ export default function Employees() {
   const fetchEmployees = async () => {
     try {
       setLoading(true);
-      const response = await fetch('/wp-json/ims/v1/employees');
-      if (response.ok) {
-        const data = await response.json();
-        if (data.success) {
-          setEmployees(data.data || []);
-        }
+      const data = await employeesApi.getAll();
+      if (data.success) {
+        setEmployees(data.data || []);
       }
     } catch (error) {
       console.error('Error fetching employees:', error);
@@ -92,50 +90,26 @@ export default function Employees() {
       
       if (editingEmployee) {
         // Update existing employee
-        const response = await fetch(`/wp-json/ims/v1/employees/${editingEmployee.id}`, {
-          method: 'PUT',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify(employeeData),
-        });
-
-        if (response.ok) {
-          const data = await response.json();
-          if (data.success) {
-            setEmployees(prev => prev.map(emp => 
-              emp.id === editingEmployee.id ? { ...employeeData, id: editingEmployee.id } : emp
-            ));
-            toast({
-              title: "Success",
-              description: `${employeeData.name} has been updated successfully`,
-            });
-            setEditingEmployee(null);
-          }
-        } else {
-          throw new Error('Failed to update employee');
+        const data = await employeesApi.update(editingEmployee.id!, employeeData);
+        if (data.success) {
+          setEmployees(prev => prev.map(emp => 
+            emp.id === editingEmployee.id ? { ...employeeData, id: editingEmployee.id } : emp
+          ));
+          toast({
+            title: "Success",
+            description: `${employeeData.name} has been updated successfully`,
+          });
+          setEditingEmployee(null);
         }
       } else {
         // Create new employee
-        const response = await fetch('/wp-json/ims/v1/employees', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify(employeeData),
-        });
-
-        if (response.ok) {
-          const data = await response.json();
-          if (data.success) {
-            setEmployees(prev => [...prev, data.data]);
-            toast({
-              title: "Success",
-              description: `${employeeData.name} has been added to the team`,
-            });
-          }
-        } else {
-          throw new Error('Failed to create employee');
+        const data = await employeesApi.create(employeeData);
+        if (data.success) {
+          setEmployees(prev => [...prev, data.data]);
+          toast({
+            title: "Success",
+            description: `${employeeData.name} has been added to the team`,
+          });
         }
       }
     } catch (error) {
@@ -156,21 +130,13 @@ export default function Employees() {
     if (!employee || !confirm(`Are you sure you want to remove ${employee.name}?`)) return;
 
     try {
-      const response = await fetch(`/wp-json/ims/v1/employees/${id}`, {
-        method: 'DELETE',
-      });
-
-      if (response.ok) {
-        const data = await response.json();
-        if (data.success) {
-          setEmployees(employees.filter(e => e.id !== id));
-          toast({
-            title: "Employee Removed",
-            description: `${employee.name} has been removed from the team`,
-          });
-        }
-      } else {
-        throw new Error('Failed to delete employee');
+      const data = await employeesApi.delete(id);
+      if (data.success) {
+        setEmployees(employees.filter(e => e.id !== id));
+        toast({
+          title: "Employee Removed",
+          description: `${employee.name} has been removed from the team`,
+        });
       }
     } catch (error) {
       console.error('Error deleting employee:', error);

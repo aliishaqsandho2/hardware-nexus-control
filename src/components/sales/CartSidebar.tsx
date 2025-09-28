@@ -9,6 +9,8 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Input } from "@/components/ui/input";
 import { ShoppingCart, User, X, Plus, Minus, UserPlus, Edit2, CreditCard, ChevronRight, ChevronLeft, ExternalLink } from "lucide-react";
 import { OutsourcingModal } from "./OutsourcingModal";
+import { AccountSelector } from "@/components/shared/AccountSelector";
+import { type Account } from "@/services/accountsApi";
 
 interface CartItem {
   productId: number;
@@ -30,7 +32,8 @@ interface CartSidebarProps {
   selectedCustomer: any;
   customers: any[];
   orderStatus: string;
-  paymentMethod: string;
+  selectedAccount?: Account;
+  selectedAccountId?: string;
   isCustomerDialogOpen: boolean;
   isQuickCustomerOpen: boolean;
   isCollapsed?: boolean;
@@ -39,13 +42,13 @@ interface CartSidebarProps {
   onSetIsCustomerDialogOpen: (open: boolean) => void;
   onSetIsQuickCustomerOpen: (open: boolean) => void;
   onSetOrderStatus: (status: string) => void;
-  onSetPaymentMethod: (method: string) => void;
   onUpdateCartQuantity: (productId: number, quantity: number) => void;
   onRemoveFromCart: (productId: number) => void;
   onCheckout: () => void;
   onUpdateItemPrice?: (productId: number, newPrice: number) => void;
   onToggleCollapse?: () => void;
   onOutsourceItem?: (productId: number, data: { supplierId: number; costPerUnit: number; notes?: string }) => void;
+  onAccountChange?: (accountId: string, account: Account) => void;
 }
 
 export const CartSidebar: React.FC<CartSidebarProps> = ({
@@ -53,7 +56,8 @@ export const CartSidebar: React.FC<CartSidebarProps> = ({
   selectedCustomer,
   customers,
   orderStatus,
-  paymentMethod,
+  selectedAccount,
+  selectedAccountId,
   isCustomerDialogOpen,
   isQuickCustomerOpen,
   isCollapsed = false,
@@ -62,13 +66,13 @@ export const CartSidebar: React.FC<CartSidebarProps> = ({
   onSetIsCustomerDialogOpen,
   onSetIsQuickCustomerOpen,
   onSetOrderStatus,
-  onSetPaymentMethod,
   onUpdateCartQuantity,
   onRemoveFromCart,
   onCheckout,
   onUpdateItemPrice,
   onToggleCollapse,
-  onOutsourceItem
+  onOutsourceItem,
+  onAccountChange
 }) => {
   const [priceEditingItem, setPriceEditingItem] = useState<number | null>(null);
   const [tempPrice, setTempPrice] = useState<string>("");
@@ -250,17 +254,16 @@ export const CartSidebar: React.FC<CartSidebarProps> = ({
         <div className="p-1 border-b border-border bg-muted/50 flex-shrink-0">
           <div className="space-y-2">
 
-            <Select value={paymentMethod} onValueChange={onSetPaymentMethod}>
-              <SelectTrigger className="h-8 text-xs bg-background border-input">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="cash">Cash</SelectItem>
-                <SelectItem value="credit">Credit</SelectItem>
-                <SelectItem value="card">Card</SelectItem>
-                <SelectItem value="bank_transfer">Bank Transfer</SelectItem>
-              </SelectContent>
-            </Select>
+            {/* Account Selector */}
+            <AccountSelector
+              value={selectedAccountId}
+              onValueChange={onAccountChange || (() => {})}
+              label="Payment Account"
+              placeholder="Select payment account"
+              className="text-xs"
+              filterTypes={['cash', 'bank']}
+              required
+            />
           </div>
         </div>
         <div className="p-1 border-b border-border bg-muted/50 flex-shrink-0">
@@ -483,7 +486,7 @@ export const CartSidebar: React.FC<CartSidebarProps> = ({
             className="w-full bg-green-600 hover:bg-green-700 text-white h-10 text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed"
             size="lg"
           >
-            {isProcessingSale ? 'Processing Sale...' : `Complete Sale (${paymentMethod === 'cash' ? 'Cash' : paymentMethod === 'credit' ? 'Credit' : 'Card'})`}
+            {isProcessingSale ? 'Processing Sale...' : `Complete Sale${selectedAccount ? ` (${selectedAccount.account_name})` : ''}`}
           </Button>
         </div>
       )}

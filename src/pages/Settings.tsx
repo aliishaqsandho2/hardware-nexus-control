@@ -390,7 +390,7 @@ export default function Settings() {
                     <Label htmlFor="apiBaseUrl">API Base URL</Label>
                     <Input 
                       id="apiBaseUrl" 
-                      placeholder="https://example.com/wp-json/ims/v1"
+                      placeholder="https://example.com"
                       value={apiBaseUrl}
                       onChange={(e) => setApiBaseUrl(e.target.value)}
                     />

@@ -473,6 +473,46 @@ export const suppliersApi = {
     }),
 };
 
+// Employee type definition
+export interface Employee {
+  id?: number;
+  name: string;
+  email: string;
+  phone: string;
+  position: string;
+  department: string;
+  salary: number;
+  joinDate?: string;
+  status: 'active' | 'inactive' | 'on_leave';
+  avatar?: string;
+  address: string;
+  experience: string;
+}
+
+// Employees API
+export const employeesApi = {
+  getAll: () => apiRequest<ApiResponse<Employee[]>>('/employees'),
+  
+  getById: (id: number) => apiRequest<ApiResponse<Employee>>(`/employees/${id}`),
+  
+  create: (employee: Employee) =>
+    apiRequest<ApiResponse<Employee>>('/employees', {
+      method: 'POST',
+      body: JSON.stringify(employee),
+    }),
+  
+  update: (id: number, employee: Employee) =>
+    apiRequest<ApiResponse<Employee>>(`/employees/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify(employee),
+    }),
+  
+  delete: (id: number) =>
+    apiRequest<ApiResponse<any>>(`/employees/${id}`, {
+      method: 'DELETE',
+    }),
+};
+
 // Purchase Orders API - Fixed to match new WordPress API structure
 export const purchaseOrdersApi = {
   getAll: (params?: {

@@ -33,7 +33,9 @@ import {
   PieChart,
   ShoppingBag,
   MessageCircle,
-  Bot
+  Bot,
+  User,
+  Building2
 } from "lucide-react"
 import { useNavigate, useLocation } from "react-router-dom"
 import { useToast } from "@/hooks/use-toast"
@@ -56,45 +58,48 @@ const mainItems: MenuItem[] = [
     icon: Home,
   },
   {
-    title: "Auto Mate",
-    url: "/automate",
-    icon: Bot,
-    badge: "AI"
-  },
-  {
-    title: "Profit Analytics",
-    url: "/profit",
-    icon: PieChart,
-  },
-  {
     title: "Products",
     url: "/products",
     icon: Package,
   },
   {
-    title: "Sales (POS)",
+    title: "Point Of Sale",
     url: "/sales",
     icon: ShoppingCart,
   },
   {
-    title: "Orders",
+    title: "All Sales",
     url: "/orders",
     icon: ShoppingBag,
   },
   {
-    title: "Outsourced Orders",
+    title: "Outsourced Sales",
     url: "/outsourced-orders",
     icon: Truck,
   },
+   {
+    title: "Ask AI",
+    url: "/reports",
+    icon: MessageCircle,
+  }
+]
+// Business Operations - removed Sales Receipts
+const businessItems: MenuItem[] = [
   {
     title: "Customers",
     url: "/customers",
     icon: Users,
   },
-]
-
-// Business Operations - removed Sales Receipts
-const businessItems: MenuItem[] = [
+  {
+    title: "Employees",
+    url: "/employees",
+    icon: UserCheck,
+  },
+  {
+    title: "Quotations",
+    url: "/quotations",
+    icon: Calculator,
+  },
   {
     title: "Suppliers",
     url: "/suppliers",
@@ -104,65 +109,30 @@ const businessItems: MenuItem[] = [
     title: "Purchase Orders",
     url: "/purchase-orders",
     icon: FileText,
-  },
-  {
-    title: "Quotations",
-    url: "/quotations",
-    icon: Calculator,
-  },
+  }
 ]
 
 // Financial Management
 const financeItems: MenuItem[] = [
   {
-    title: "Finance Overview",
-    url: "/finance",
+    title: "Finances",
+    url: "/finances",
     icon: DollarSign,
   },
   {
-    title: "Accounts Receivable",
-    url: "/accounts-receivable",
-    icon: CreditCard,
-  },
-  {
-    title: "Expense Tracking",
-    url: "/expense-tracking",
-    icon: TrendingUp,
-  },
+    title: "Accounts",
+    url: "/accounts",
+    icon: Building2,
+  }
 ]
 
 // Analytics & Reports
 const analyticsItems: MenuItem[] = [
   {
-    title: "Ask AI",
-    url: "/reports",
-    icon: MessageCircle,
-  },
-  {
-    title: "Customer Insights",
-    url: "/customer-insights",
-    icon: UserCheck,
-  },
-]
-
-// Communication & Tools
-const toolsItems: MenuItem[] = [
-  {
-    title: "Notifications",
-    url: "/notifications",
-    icon: Bell,
-    badge: "5"
-  },
-  {
-    title: "Calendar",
-    url: "/calendar",
-    icon: Calendar,
-  },
-  {
-    title: "Backup & Sync",
-    url: "/backup",
-    icon: Database,
-  },
+    title: "Profit Analytics",
+    url: "/profit",
+    icon: PieChart,
+  }
 ]
 
 export function AppSidebar() {
@@ -275,13 +245,7 @@ export function AppSidebar() {
           </SidebarGroupContent>
         </SidebarGroup>
 
-        {/* Communication & Tools */}
-        <SidebarGroup>
-          <SidebarGroupLabel className="text-sidebar-foreground/70">Communication & Tools</SidebarGroupLabel>
-          <SidebarGroupContent>
-            {renderMenuItems(toolsItems)}
-          </SidebarGroupContent>
-        </SidebarGroup>
+    
       </SidebarContent>
       
       <SidebarFooter className="border-t border-sidebar-border p-2">

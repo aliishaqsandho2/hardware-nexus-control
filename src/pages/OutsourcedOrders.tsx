@@ -206,7 +206,7 @@ const OutsourcedOrders = () => {
     return (
       <div className="p-6">
         <div className="flex items-center justify-center h-64">
-          <div className="text-lg">Loading outsourced orders...</div>
+          <div className="text-lg">Loading Outsourced Sales...</div>
         </div>
       </div>
     );
@@ -217,7 +217,7 @@ const OutsourcedOrders = () => {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold">Outsourced Orders</h1>
+          <h1 className="text-3xl font-bold">Outsourced Sales</h1>
           <p className="text-muted-foreground">Orders containing products sourced from external suppliers</p>
         </div>
       </div>
@@ -271,7 +271,7 @@ const OutsourcedOrders = () => {
       {/* Orders Table */}
       <Card>
         <CardHeader>
-          <CardTitle>Outsourced Orders</CardTitle>
+          <CardTitle>Outsourced Sales</CardTitle>
         </CardHeader>
         <CardContent>
           <div className="overflow-x-auto">

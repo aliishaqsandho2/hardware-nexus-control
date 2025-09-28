@@ -9,25 +9,24 @@ import { FontProvider } from "@/components/FontProvider";
 import { AppSidebar } from "@/components/AppSidebar";
 import { Header } from "@/components/Header";
 import Dashboard from "./pages/Dashboard";
-import AutoMate from "./pages/AutoMate";
 import Products from "./pages/Products";
 import Sales from "./pages/Sales";
 import Orders from "./pages/Orders";
 import Customers from "./pages/Customers";
 import Inventory from "./pages/Inventory";
-import Finance from "./pages/Finance";
+import Finances from "./pages/Finances";
 import Reports from "./pages/Reports";
 import NotFound from "./pages/NotFound";
 import Suppliers from "./pages/Suppliers";
 import PurchaseOrders from "./pages/PurchaseOrders";
 import Quotations from "./pages/Quotations";
-import ExpenseTracking from "./pages/ExpenseTracking";
 import CustomerInsights from "./pages/CustomerInsights";
 import Notifications from "./pages/Notifications";
 import Settings from "./pages/Settings";
 import BackupSync from "./pages/BackupSync";
-import Calendar from "./pages/Calendar";
-import AccountsReceivable from "./pages/AccountsReceivable";
+import Accounts from "./pages/Accounts";
+import Profile from "./pages/Profile";
+import Employees from "./pages/Employees";
 import OutsourcedOrders from "./pages/OutsourcedOrders";
 import Profit from "./pages/Profit";
 
@@ -49,7 +48,6 @@ const App = () => (
                 <main className="flex-1 overflow-auto custom-scrollbar">
                    <Routes>
                      <Route path="/" element={<Dashboard />} />
-                     <Route path="/automate" element={<AutoMate />} />
                      <Route path="/profit" element={<Profit />} />
                     <Route path="/products" element={<Products />} />
                     <Route path="/sales" element={<Sales />} />
@@ -60,14 +58,14 @@ const App = () => (
                     <Route path="/suppliers" element={<Suppliers />} />
                     <Route path="/purchase-orders" element={<PurchaseOrders />} />
                     <Route path="/quotations" element={<Quotations />} />
-                    <Route path="/expense-tracking" element={<ExpenseTracking />} />
-                    <Route path="/customer-insights" element={<CustomerInsights />} />
-                    <Route path="/notifications" element={<Notifications />} />
-                    <Route path="/settings" element={<Settings />} />
-                    <Route path="/backup" element={<BackupSync />} />
-                    <Route path="/calendar" element={<Calendar />} />
-                    <Route path="/accounts-receivable" element={<AccountsReceivable />} />
-                    <Route path="/finance" element={<Finance />} />
+                     <Route path="/customer-insights" element={<CustomerInsights />} />
+                     <Route path="/notifications" element={<Notifications />} />
+        <Route path="/accounts" element={<Accounts />} />
+        <Route path="/profile" element={<Profile />} />
+                     <Route path="/employees" element={<Employees />} />
+                     <Route path="/settings" element={<Settings />} />
+                     <Route path="/backup" element={<BackupSync />} />
+                    <Route path="/finances" element={<Finances />} />
                     <Route path="/reports" element={<Reports />} />
                     <Route path="*" element={<NotFound />} />
                   </Routes>

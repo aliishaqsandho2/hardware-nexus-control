@@ -5,6 +5,12 @@ export interface ApiResponse<T> {
   success: boolean;
   data: T;
   message?: string;
+  pagination?: {
+    currentPage: number;
+    totalPages: number;
+    totalRecords: number;
+    limit: number;
+  };
 }
 
 // Customer balance update types
@@ -80,163 +86,215 @@ export interface FinanceOverview {
   accountsPayable: number;
 }
 
-// Mock data generator for when API is not available
-const generateMockData = () => {
-  return {
-    overview: {
-      revenue: {
-        total: 150000,
-        cash: 90000,
-        credit: 60000,
-        growth: 12.5
-      },
-      expenses: {
-        total: 45000,
-        purchases: 30000,
-        operational: 15000,
-        growth: 8.2
-      },
-      profit: {
-        net: 105000,
-        margin: 70
-      },
-      cashFlow: {
-        inflow: 150000,
-        outflow: 45000,
-        net: 105000
-      },
-      accountsReceivable: 25000,
-      accountsPayable: 15000
-    },
-    receivables: [
-      {
-        id: 1,
-        customerName: "ABC Electronics",
-        customerId: 101,
-        orderNumber: "ORD-001",
-        invoiceNumber: "INV-001",
-        amount: 15000,
-        balance: 12000,
-        paidAmount: 3000,
-        dueDate: new Date(Date.now() + 5 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
-        daysOverdue: 0,
-        status: 'pending' as const
-      },
-      {
-        id: 2,
-        customerName: "XYZ Hardware",
-        customerId: 102,
-        orderNumber: "ORD-002",
-        invoiceNumber: "INV-002",
-        amount: 8000,
-        balance: 8000,
-        paidAmount: 0,
-        dueDate: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
-        daysOverdue: 2,
-        status: 'overdue' as const
-      },
-      {
-        id: 3,
-        customerName: "Tech Solutions",
-        customerId: 103,
-        orderNumber: "ORD-003",
-        invoiceNumber: "INV-003",
-        amount: 5000,
-        balance: 5000,
-        paidAmount: 0,
-        dueDate: new Date().toISOString().split('T')[0],
-        daysOverdue: 0,
-        status: 'pending' as const
-      }
-    ],
-    expenses: [
-      {
-        id: 1,
-        category: "Office Supplies",
-        description: "Monthly office supplies purchase",
-        amount: 2500,
-        date: new Date().toLocaleDateString('en-GB'),
-        reference: "EXP-001",
-        paymentMethod: 'cash' as const,
-        createdBy: "Admin",
-        createdAt: new Date().toISOString()
-      },
-      {
-        id: 2,
-        category: "Utilities",
-        description: "Electricity bill payment",
-        amount: 3200,
-        date: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toLocaleDateString('en-GB'),
-        reference: "EXP-002",
-        paymentMethod: 'bank_transfer' as const,
-        createdBy: "Admin",
-        createdAt: new Date().toISOString()
-      }
-    ]
-  };
-};
+// Payments types based on database schema
+export interface Payment {
+  id: number;
+  customer_id: number;
+  transaction_id: number;
+  account_id: number;
+  amount: number;
+  payment_method: 'cash' | 'bank_transfer' | 'cheque';
+  reference?: string;
+  notes?: string;
+  date: string;
+  created_at: string;
+  payment_type: 'receipt' | 'payment';
+  status: 'pending' | 'cleared' | 'bounced';
+}
 
-// Generic API request function with fallback to mock data
+// Payment Allocations
+export interface PaymentAllocation {
+  id: number;
+  payment_id: number;
+  invoice_id: number;
+  invoice_type: 'sale' | 'purchase';
+  allocated_amount: number;
+  allocation_date: string;
+  created_at: string;
+}
+
+// Profit data
+export interface Profit {
+  id: number;
+  reference_id: number;
+  reference_type: 'sale' | 'external_purchase' | 'aggregate' | 'daily' | 'weekly' | 'monthly';
+  period_type: 'sale' | 'daily' | 'weekly' | 'monthly' | 'yearly';
+  revenue: number;
+  cogs: number;
+  expenses: number;
+  profit: number;
+  period_start?: string;
+  period_end?: string;
+  sale_date?: string;
+  product_id?: number;
+  created_at: string;
+  updated_at: string;
+}
+
+// New API Types based on your specifications
+export interface AccountsPayable {
+  id: string;
+  order_number: string;
+  date: string;
+  expected_delivery: string;
+  total: string;
+  supplier_name: string;
+  contact_person: string;
+  phone: string;
+  email: string;
+  paid_amount: string;
+  due_amount: string;
+  days_outstanding: string;
+  status: string;
+}
+
+export interface CashFlowTransaction {
+  id: string;
+  type: 'inflow' | 'outflow';
+  amount: string;
+  account_id: string;
+  reference: string;
+  description: string;
+  date: string;
+  account_name: string;
+  account_code: string;
+  customer_name?: string;
+}
+
+export interface ProfitAnalysis {
+  period: {
+    from: string;
+    to: string;
+  };
+  gross_profit_analysis: {
+    total_revenue: string;
+    total_external_purchases: string;
+    gross_profit: string;
+    gross_profit_margin: string;
+  };
+  net_profit_analysis: {
+    net_profit: string;
+    total_revenue: string;
+    total_expenses: string;
+    net_profit_margin: string;
+  };
+  top_performing_products: Array<{
+    product_id: string;
+    product_revenue: string;
+    product_cogs: string;
+    product_profit: string;
+    product_margin: string;
+  }>;
+  monthly_trend: Array<{
+    month: string;
+    monthly_revenue: string;
+    monthly_cogs: string;
+    monthly_expenses: string;
+    monthly_profit: string;
+  }>;
+}
+
+export interface FinancialStatements {
+  income_statement: {
+    period: {
+      from: string;
+      to: string;
+    };
+    revenue: number;
+    cost_of_goods_sold: number;
+    gross_profit: number;
+    expenses: number;
+    net_income: number;
+  };
+  balance_sheet: {
+    as_of_date: string;
+    assets: {
+      current_assets: number;
+      total_assets: number;
+    };
+    liabilities: {
+      current_liabilities: number;
+      total_liabilities: number;
+    };
+    equity: {
+      retained_earnings: number;
+      total_equity: number;
+    };
+    balance: boolean;
+  };
+  cash_flow_statement: {
+    period: {
+      from: string;
+      to: string;
+    };
+    operating_activities: {
+      cash_inflows: number;
+      cash_outflows: number;
+      net_cash_flow: number;
+    };
+    net_increase_in_cash: number;
+  };
+}
+
+export interface Budget {
+  id: string;
+  year: string;
+  month: string;
+  category: string;
+  budget_amount: string;
+  actual_amount: string;
+  variance: string;
+  created_at: string;
+}
+
+export interface TaxSummary {
+  period: string;
+  sales_tax_summary: {
+    total_transactions: string;
+    total_sales: string;
+    total_tax_collected: string;
+    average_tax_per_sale: string;
+  };
+  expense_summary: {
+    total_expenses: string;
+    total_expense_amount: string;
+  };
+  tax_breakdown: Array<{
+    tax_status: string;
+    transaction_count: string;
+    total_amount: string;
+    total_tax: string;
+  }>;
+  monthly_trend: Array<{
+    month: string;
+    monthly_tax: string;
+    monthly_sales: string;
+    transaction_count: string;
+  }>;
+  net_tax_liability: string;
+}
+
+// Generic API request function - no fallback to mock data
 const apiRequest = async <T>(
   endpoint: string,
   options: RequestInit = {}
 ): Promise<T> => {
   const url = `${apiConfig.getBaseUrl()}${endpoint}`;
 
-  try {
-    const response = await fetch(url, {
-      headers: {
-        'Content-Type': 'application/json',
-        ...options.headers,
-      },
-      ...options,
-    });
+  const response = await fetch(url, {
+    headers: {
+      'Content-Type': 'application/json',
+      ...options.headers,
+    },
+    ...options,
+  });
 
-    if (!response.ok) {
-      console.warn(`API endpoint ${endpoint} returned ${response.status}, using mock data`);
-      throw new Error(`HTTP error! status: ${response.status}`);
-    }
-
-    const data = await response.json();
-    return data;
-  } catch (error) {
-    console.warn('Finance API request failed, using mock data:', error);
-    
-    // Return mock data based on endpoint
-    const mockData = generateMockData();
-    
-    if (endpoint.includes('/finance/overview')) {
-      return { success: true, data: mockData.overview } as T;
-    } else if (endpoint.includes('/finance/accounts-receivable')) {
-      return { 
-        success: true, 
-        data: { 
-          receivables: mockData.receivables,
-          summary: {
-            totalReceivables: mockData.receivables.reduce((sum, r) => sum + r.balance, 0),
-            overdueAmount: mockData.receivables.filter(r => r.daysOverdue > 0).reduce((sum, r) => sum + r.balance, 0),
-            overdueCount: mockData.receivables.filter(r => r.daysOverdue > 0).length
-          }
-        }
-      } as T;
-    } else if (endpoint.includes('/finance/expenses')) {
-      return {
-        success: true,
-        data: {
-          expenses: mockData.expenses,
-          summary: {
-            totalExpenses: mockData.expenses.reduce((sum, e) => sum + e.amount, 0),
-            categories: [
-              { category: "Office Supplies", amount: 2500 },
-              { category: "Utilities", amount: 3200 }
-            ]
-          }
-        }
-      } as T;
-    }
-    
-    throw error;
+  if (!response.ok) {
+    throw new Error(`HTTP error! status: ${response.status}`);
   }
+
+  const data = await response.json();
+  return data;
 };
 
 // Finance API endpoints
@@ -349,13 +407,307 @@ export const financeApi = {
     date: string;
     paymentMethod: string;
     reference?: string;
+  }) =>
+    apiRequest<ApiResponse<Expense>>('/finance/expenses', {
+      method: 'POST',
+      body: JSON.stringify(expense),
+    }),
+
+  // New API methods based on your specifications
+  
+  // Accounts Payable
+  getAccountsPayable: () =>
+    apiRequest<ApiResponse<AccountsPayable[]>>('/finance/accounts-payable'),
+
+  // Cash Flow
+  getCashFlowTransactions: (params?: {
+    type?: 'inflow' | 'outflow';
+    date_from?: string;
+    date_to?: string;
+    account_id?: number;
+    page?: number;
+    per_page?: number;
   }) => {
-    console.log('Creating expense:', expense);
-    // For mock data, just return success
-    return Promise.resolve({
-      success: true,
-      data: { id: Date.now(), ...expense },
-      message: 'Expense created successfully'
-    });
+    const queryParams = new URLSearchParams();
+    if (params) {
+      Object.entries(params).forEach(([key, value]) => {
+        if (value !== undefined) queryParams.append(key, value.toString());
+      });
+    }
+    const query = queryParams.toString();
+    return apiRequest<ApiResponse<{
+      transactions: CashFlowTransaction[];
+      summary: {
+        total_inflow: string;
+        total_outflow: string;
+        total_transactions: string;
+      };
+      pagination: {
+        page: number;
+        per_page: number;
+        total: string;
+        total_pages: number;
+      };
+    }>>(`/finance/cash-flow${query ? `?${query}` : ''}`);
   },
+
+  createCashFlowEntry: (entry: {
+    type: 'inflow' | 'outflow';
+    amount: number;
+    date: string;
+    account_id?: number;
+    reference?: string;
+    description?: string;
+  }) =>
+    apiRequest<ApiResponse<{ message: string; cash_flow_id: number }>>('/finance/cash-flow', {
+      method: 'POST',
+      body: JSON.stringify(entry),
+    }),
+
+  // Profit Analysis
+  getProfitAnalysis: (params?: {
+    date_from?: string;
+    date_to?: string;
+  }) => {
+    const queryParams = new URLSearchParams();
+    if (params) {
+      Object.entries(params).forEach(([key, value]) => {
+        if (value !== undefined) queryParams.append(key, value.toString());
+      });
+    }
+    const query = queryParams.toString();
+    return apiRequest<ApiResponse<ProfitAnalysis>>(`/finance/profit-analysis${query ? `?${query}` : ''}`);
+  },
+
+  // Financial Statements
+  getFinancialStatements: (params?: {
+    date_from?: string;
+    date_to?: string;
+    type?: 'income' | 'balance' | 'cash_flow' | 'all';
+  }) => {
+    const queryParams = new URLSearchParams();
+    if (params) {
+      Object.entries(params).forEach(([key, value]) => {
+        if (value !== undefined) queryParams.append(key, value.toString());
+      });
+    }
+    const query = queryParams.toString();
+    return apiRequest<ApiResponse<FinancialStatements>>(`/finance/financial-statements${query ? `?${query}` : ''}`);
+  },
+
+  // Budget Management
+  getBudget: (params?: {
+    year?: number;
+    category?: string;
+  }) => {
+    const queryParams = new URLSearchParams();
+    if (params) {
+      Object.entries(params).forEach(([key, value]) => {
+        if (value !== undefined) queryParams.append(key, value.toString());
+      });
+    }
+    const query = queryParams.toString();
+    return apiRequest<ApiResponse<{
+      budgets: Budget[];
+      actuals: Array<{
+        category: string;
+        month: string;
+        actual_amount: string;
+      }>;
+      year: string;
+    }>>(`/finance/budget${query ? `?${query}` : ''}`);
+  },
+
+  createBudget: (budget: {
+    year: number;
+    month: number;
+    category: string;
+    budget_amount: number;
+  }) =>
+    apiRequest<ApiResponse<{ message: string; action: string }>>('/finance/budget', {
+      method: 'POST',
+      body: JSON.stringify(budget),
+    }),
+
+  // Tax Summary
+  getTaxSummary: (params?: {
+    year?: number;
+    quarter?: number;
+  }) => {
+    const queryParams = new URLSearchParams();
+    if (params) {
+      Object.entries(params).forEach(([key, value]) => {
+        if (value !== undefined) queryParams.append(key, value.toString());
+      });
+    }
+    const query = queryParams.toString();
+    return apiRequest<ApiResponse<TaxSummary>>(`/finance/tax-summary${query ? `?${query}` : ''}`);
+  },
+
+  // Enhanced finance methods based on database schema
+  
+  // Payments management
+  getPayments: (params?: {
+    customer_id?: number;
+    payment_type?: 'receipt' | 'payment';
+    status?: 'pending' | 'cleared' | 'bounced';
+    date_from?: string;
+    date_to?: string;
+    page?: number;
+    limit?: number;
+  }) => {
+    const queryParams = new URLSearchParams();
+    if (params) {
+      Object.entries(params).forEach(([key, value]) => {
+        if (value !== undefined) queryParams.append(key, value.toString());
+      });
+    }
+    const query = queryParams.toString();
+    return apiRequest<ApiResponse<Payment[]>>(`/payments${query ? `?${query}` : ''}`);
+  },
+
+  createPayment: (payment: {
+    customer_id: number;
+    account_id: number;
+    amount: number;
+    payment_method: 'cash' | 'bank_transfer' | 'cheque';
+    reference?: string;
+    notes?: string;
+    date: string;
+    payment_type: 'receipt' | 'payment';
+  }) =>
+    apiRequest<ApiResponse<Payment>>('/payments', {
+      method: 'POST',
+      body: JSON.stringify(payment),
+    }),
+
+  updatePaymentStatus: (id: number, status: 'pending' | 'cleared' | 'bounced') =>
+    apiRequest<ApiResponse<Payment>>(`/payments/${id}/status`, {
+      method: 'PUT',
+      body: JSON.stringify({ status }),
+    }),
+
+  // Payment Allocations
+  getPaymentAllocations: (payment_id: number) =>
+    apiRequest<ApiResponse<PaymentAllocation[]>>(`/payments/${payment_id}/allocations`),
+
+  allocatePayment: (allocation: {
+    payment_id: number;
+    invoice_id: number;
+    invoice_type: 'sale' | 'purchase';
+    allocated_amount: number;
+    allocation_date: string;
+  }) =>
+    apiRequest<ApiResponse<PaymentAllocation>>('/payment-allocations', {
+      method: 'POST',
+      body: JSON.stringify(allocation),
+    }),
+
+  // Profit analysis
+  getProfitData: (params?: {
+    reference_type?: 'sale' | 'external_purchase' | 'aggregate' | 'daily' | 'weekly' | 'monthly';
+    period_type?: 'sale' | 'daily' | 'weekly' | 'monthly' | 'yearly';
+    date_from?: string;
+    date_to?: string;
+    product_id?: number;
+    page?: number;
+    limit?: number;
+  }) => {
+    const queryParams = new URLSearchParams();
+    if (params) {
+      Object.entries(params).forEach(([key, value]) => {
+        if (value !== undefined) queryParams.append(key, value.toString());
+      });
+    }
+    const query = queryParams.toString();
+    return apiRequest<ApiResponse<Profit[]>>(`/profit${query ? `?${query}` : ''}`);
+  },
+
+  getProfitSummary: (period?: 'daily' | 'weekly' | 'monthly' | 'yearly') =>
+    apiRequest<ApiResponse<{
+      totalRevenue: number;
+      totalCogs: number;
+      totalExpenses: number;
+      totalProfit: number;
+      profitMargin: number;
+      periodComparison: {
+        previousPeriod: {
+          revenue: number;
+          profit: number;
+          margin: number;
+        };
+        growth: {
+          revenue: number;
+          profit: number;
+        };
+      };
+      topProducts: Array<{
+        product_id: number;
+        product_name: string;
+        revenue: number;
+        profit: number;
+        margin: number;
+      }>;
+    }>>(`/profit/summary${period ? `?period=${period}` : ''}`),
+
+  // Advanced financial analytics
+  getCashFlowAnalysis: (period?: string) =>
+    apiRequest<ApiResponse<{
+      operatingCashFlow: number;
+      investingCashFlow: number;
+      financingCashFlow: number;
+      netCashFlow: number;
+      cashFlowByMonth: Array<{
+        month: string;
+        inflow: number;
+        outflow: number;
+        net: number;
+      }>;
+      cashFlowByCategory: Array<{
+        category: string;
+        inflow: number;
+        outflow: number;
+      }>;
+    }>>(`/finance/cash-flow-analysis${period ? `?period=${period}` : ''}`),
+
+  getFinancialRatios: () =>
+    apiRequest<ApiResponse<{
+      liquidityRatios: {
+        currentRatio: number;
+        quickRatio: number;
+        cashRatio: number;
+      };
+      profitabilityRatios: {
+        grossProfitMargin: number;
+        netProfitMargin: number;
+        returnOnAssets: number;
+        returnOnEquity: number;
+      };
+      activityRatios: {
+        inventoryTurnover: number;
+        receivablesTurnover: number;
+        payablesTurnover: number;
+      };
+    }>>('/finance/ratios'),
+
+  getFinancialForecast: (months: number = 12) =>
+    apiRequest<ApiResponse<{
+      forecastPeriod: number;
+      projectedRevenue: Array<{
+        month: string;
+        amount: number;
+        confidence: number;
+      }>;
+      projectedExpenses: Array<{
+        month: string;
+        amount: number;
+        confidence: number;
+      }>;
+      projectedCashFlow: Array<{
+        month: string;
+        amount: number;
+        confidence: number;
+      }>;
+      assumptions: string[];
+    }>>(`/finance/forecast?months=${months}`),
 };

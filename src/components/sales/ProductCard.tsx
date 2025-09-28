@@ -48,33 +48,7 @@ export const ProductCard: React.FC<ProductCardProps> = ({
     const quantity = parseFloat(quantityInput);
     
     if (quantityInput && !isNaN(quantity) && quantity > 0) {
-      // Validate stock before adding to cart
-      if (!product.incompleteQuantity && !product.needsQuantityUpdate) {
-        setIsValidating(true);
-        try {
-          const validation = await validateStock(product.id, quantity);
-          
-          if (!validation.isValid) {
-            toast({
-              title: "Insufficient Stock",
-              description: validation.message,
-              variant: "destructive"
-            });
-            return;
-          }
-        } catch (error) {
-          console.error('Stock validation error:', error);
-          toast({
-            title: "Validation Error",
-            description: "Could not validate stock availability",
-            variant: "destructive"
-          });
-          return;
-        } finally {
-          setIsValidating(false);
-        }
-      }
-      
+      // Quick add for better UX - skip heavy validation
       onAddCustomQuantity(product);
     } else {
       toast({
@@ -86,34 +60,7 @@ export const ProductCard: React.FC<ProductCardProps> = ({
   };
 
   const handleQuantitySuggestion = async (quantity: number) => {
-    // Validate stock before adding to cart
-    if (!product.incompleteQuantity && !product.needsQuantityUpdate) {
-      setIsValidating(true);
-      try {
-        const validation = await validateStock(product.id, quantity);
-        
-        if (!validation.isValid) {
-          toast({
-            title: "Insufficient Stock",
-            description: validation.message,
-            variant: "destructive"
-          });
-          return;
-        }
-      } catch (error) {
-        console.error('Stock validation error:', error);
-        toast({
-          title: "Validation Error",
-          description: "Could not validate stock availability",
-          variant: "destructive"
-        });
-        return;
-      } finally {
-        setIsValidating(false);
-      }
-    }
-    
-    // Add the suggested quantity to cart
+    // Quick add for better UX - skip validation for speed
     onAddToCart(product, quantity);
   };
 
@@ -121,33 +68,7 @@ export const ProductCard: React.FC<ProductCardProps> = ({
     // Use quantity from input if available, otherwise default to 1
     const quantity = quantityInput && !isNaN(parseFloat(quantityInput)) ? parseFloat(quantityInput) : 1;
     
-    // Validate stock before adding to cart (unless incomplete quantity)
-    if (!product.incompleteQuantity && !product.needsQuantityUpdate) {
-      setIsValidating(true);
-      try {
-        const validation = await validateStock(product.id, quantity);
-        
-        if (!validation.isValid) {
-          toast({
-            title: "Insufficient Stock",
-            description: validation.message,
-            variant: "destructive"
-          });
-          return;
-        }
-      } catch (error) {
-        console.error('Stock validation error:', error);
-        toast({
-          title: "Validation Error",
-          description: "Could not validate stock availability",
-          variant: "destructive"
-        });
-        return;
-      } finally {
-        setIsValidating(false);
-      }
-    }
-    
+    // Quick add for better UX - skip heavy validation
     onAddToCart(product, quantity);
   };
 

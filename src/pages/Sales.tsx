@@ -245,7 +245,7 @@ const formatPakistaniTime = (timeString: string): string => {
         const accountsData = (response.data as any)?.accounts || response.data || [];
         const accounts = Array.isArray(accountsData) ? accountsData : [];
         
-        // Find cash account as default
+        // Find Cash as default
         const cashAccount = accounts.find((acc: Account) => 
           acc.account_type === 'cash' && acc.is_active
         );
@@ -256,7 +256,7 @@ const formatPakistaniTime = (timeString: string): string => {
         }
       }
     } catch (error) {
-      console.error('Failed to load default cash account:', error);
+      console.error('Failed to load default Cash:', error);
     }
   };
 

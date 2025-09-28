@@ -54,7 +54,7 @@ export const AccountSelector = ({
   }, []);
 
   useEffect(() => {
-    // Auto-select cash account as default if no value is set
+    // Auto-select Cash as default if no value is set
     if (!value && accounts.length > 0) {
       const cashAccount = accounts.find(acc => acc.account_type === 'cash' && acc.is_active);
       if (cashAccount && onValueChange) {

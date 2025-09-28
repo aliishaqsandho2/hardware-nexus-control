@@ -66,14 +66,14 @@ export const OrdersTable = ({
     const raw = (method ?? '').toString().trim();
     if (!raw || raw === 'undefined' || raw === 'null') {
       // Default to Cash if backend omitted value (new POS flow always selects an account)
-      return 'Cash Account';
+      return 'Cash';
     }
 
     // New account-based format: "{type}-{account_name}"
     if (raw.includes('-')) {
       const [type, ...nameParts] = raw.split('-');
       const t = (type || '').toLowerCase();
-      if (t === 'cash') return 'Cash Account';
+      if (t === 'cash') return 'Cash';
       if (['bank', 'savings', 'current', 'checking'].includes(t)) return 'Bank Account';
       if (t === 'credit') return 'Credit Account';
       const accountName = nameParts.join('-').trim();
@@ -82,7 +82,7 @@ export const OrdersTable = ({
 
     // Legacy keywords
     const m = raw.toLowerCase();
-    if (m === 'cash') return 'Cash Account';
+    if (m === 'cash') return 'Cash';
     if (['bank', 'bank_transfer', 'savings', 'current', 'checking'].includes(m)) return 'Bank Account';
     if (m === 'credit') return 'Credit Account';
     if (m === 'card') return 'Card Payment';
@@ -92,7 +92,7 @@ export const OrdersTable = ({
   const getPaymentMethodBadge = (method: string) => {
     const label = getPaymentMethodLabel(method);
     switch (label) {
-      case 'Cash Account':
+      case 'Cash':
         return <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200">{label}</Badge>;
       case 'Bank Account':
         return <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-200">{label}</Badge>;

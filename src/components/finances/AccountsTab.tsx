@@ -269,7 +269,7 @@ export const AccountsTab = () => {
                       <SelectItem value="current">Current Account</SelectItem>
                       <SelectItem value="savings">Savings Account</SelectItem>
                       <SelectItem value="fixed">Fixed Deposit</SelectItem>
-                      <SelectItem value="cash">Cash Account</SelectItem>
+                      <SelectItem value="cash">Cash</SelectItem>
                       <SelectItem value="credit">Credit Account</SelectItem>
                     </SelectContent>
                   </Select>

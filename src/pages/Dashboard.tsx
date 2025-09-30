@@ -1,5 +1,6 @@
 import React from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { PincodeProtection } from "@/components/PincodeProtection"
 import { ChartContainer, ChartTooltip, ChartTooltipContent } from "@/components/ui/chart"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Button } from "@/components/ui/button"
@@ -172,7 +173,11 @@ export default function Dashboard() {
   })) || []
 
   return (
-    <div className="flex-1 space-y-4 p-4 md:p-6">
+    <PincodeProtection 
+      title="Dashboard Analytics" 
+      description="Access comprehensive business insights and real-time analytics"
+    >
+      <div className="flex-1 space-y-4 p-4 md:p-6">
       <Tabs defaultValue="overview" className="space-y-4">
         <TabsList className="grid w-full grid-cols-2 mb-6 h-full lg:grid-cols-4">
           <TabsTrigger value="overview" className="text-xs sm:text-sm">Overview</TabsTrigger>
@@ -1074,6 +1079,7 @@ export default function Dashboard() {
           </Card>
         </TabsContent>
       </Tabs>
-    </div>
+      </div>
+    </PincodeProtection>
   )
 }

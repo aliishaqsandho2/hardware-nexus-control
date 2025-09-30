@@ -14,9 +14,6 @@ import { useToast } from "@/hooks/use-toast";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { purchaseOrdersApi, suppliersApi, productsApi } from "@/services/api";
 import { newFinanceApi } from "@/services/newFinanceApi";
-import { AccountSelectionModal } from "@/components/shared/AccountSelectionModal";
-import { useCashflowManager } from "@/hooks/useCashflowManager";
-import { type Account } from "@/services/accountsApi";
 import { 
   Table, 
   TableBody, 
@@ -39,7 +36,6 @@ import { apiConfig } from "@/utils/apiConfig";
 const PurchaseOrders = () => {
   const { toast } = useToast();
   const queryClient = useQueryClient();
-  const { createPurchaseCashflow } = useCashflowManager();
   const [searchTerm, setSearchTerm] = useState("");
   const [filterStatus, setFilterStatus] = useState("all");
   const [currentPage, setCurrentPage] = useState(1);
@@ -51,8 +47,6 @@ const PurchaseOrders = () => {
   const [statusNotes, setStatusNotes] = useState("");
   const [isStatusDialogOpen, setIsStatusDialogOpen] = useState(false);
   const [expandedRow, setExpandedRow] = useState<number | null>(null);
-  const [isAccountSelectionOpen, setIsAccountSelectionOpen] = useState(false);
-  const [receivedOrderForAccount, setReceivedOrderForAccount] = useState<any>(null);
   const itemsPerPage = 20;
 
   // Fetch purchase orders with updated parameters
@@ -87,7 +81,7 @@ const PurchaseOrders = () => {
     },
   });
 
-// Update status mutation
+  // Update status mutation
   const updateStatusMutation = useMutation({
     mutationFn: async ({ id, status, notes }: { id: number, status: string, notes?: string }) => {
       // If status is "received", use the receive endpoint
@@ -117,18 +111,31 @@ const PurchaseOrders = () => {
       queryClient.invalidateQueries({ queryKey: ['purchase-orders'] });
       queryClient.invalidateQueries({ queryKey: ['inventory'] }); // Refresh inventory data
       
-      // Show account selection for received purchase orders
+      // Add cash flow entry for received purchase order (debit/outflow)
       if (variables.status === "received") {
-        const order = orders.find((o: any) => o.id === variables.id);
-        if (order && order.total) {
-          // Set the received order for account selection
-          setReceivedOrderForAccount({
-            id: order.id,
-            orderNumber: order.orderNumber,
-            supplierName: order.supplierName,
-            total: parseFloat(order.total)
-          });
-          setIsAccountSelectionOpen(true);
+        try {
+          const order = orders.find((o: any) => o.id === variables.id);
+          if (order && order.total) {
+            // Find Bank account for debit
+            let accountId: number | undefined;
+            const accountsResponse = await newFinanceApi.getAccounts({ type: 'bank', active: true });
+            const bankAccount = accountsResponse.data?.find((acc: any) => 
+              acc.account_type?.toLowerCase() === 'bank' || acc.account_name?.toLowerCase().includes('bank')
+            );
+            accountId = bankAccount ? parseInt(bankAccount.id) : undefined;
+
+            await newFinanceApi.createFinanceCashFlow({
+              type: 'outflow',
+              amount: parseFloat(order.total),
+              date: new Date().toISOString().split('T')[0],
+              account_id: accountId,
+              reference: order.orderNumber || `PO-${order.id}`,
+              description: `Purchase order received - ${order.supplierName} - Stock purchase`
+            });
+          }
+        } catch (cashFlowError) {
+          console.error('Failed to create cash flow entry for purchase order:', cashFlowError);
+          // Don't break the purchase flow if cash flow fails
         }
       }
       
@@ -138,8 +145,8 @@ const PurchaseOrders = () => {
       setIsStatusDialogOpen(false);
       toast({
         title: "Status Updated",
-        description: variables.status === "received" 
-          ? "Purchase order marked as received, inventory updated. Please select account for payment recording."
+        description: newStatus === "received" 
+          ? "Purchase order marked as received, inventory updated, and cash flow recorded successfully"
           : "Purchase order status has been updated successfully",
       });
     },
@@ -245,35 +252,6 @@ const PurchaseOrders = () => {
   const handleCreateOrder = (formData: any) => {
     console.log('Creating order with data:', formData);
     createOrderMutation.mutate(formData);
-  };
-
-  const handleAccountSelection = async (accountId: string, account: Account) => {
-    if (!receivedOrderForAccount) return;
-
-    try {
-      await createPurchaseCashflow(
-        receivedOrderForAccount.total,
-        parseInt(accountId),
-        account,
-        receivedOrderForAccount.orderNumber,
-        receivedOrderForAccount.supplierName
-      );
-
-      toast({
-        title: "Purchase Recorded",
-        description: `Purchase payment recorded successfully in ${account.account_name}`,
-      });
-    } catch (error) {
-      console.error('Failed to record purchase cashflow:', error);
-      toast({
-        title: "Warning",
-        description: "Purchase order was received but payment recording failed. Please record manually.",
-        variant: "destructive"
-      });
-    } finally {
-      setReceivedOrderForAccount(null);
-      setIsAccountSelectionOpen(false);
-    }
   };
 
   const handleStatusUpdate = () => {
@@ -860,20 +838,6 @@ const PurchaseOrders = () => {
           )}
         </DialogContent>
       </Dialog>
-      {/* Account Selection Modal for Purchase Orders */}
-      <AccountSelectionModal
-        isOpen={isAccountSelectionOpen}
-        onClose={() => {
-          setIsAccountSelectionOpen(false);
-          setReceivedOrderForAccount(null);
-        }}
-        onConfirm={handleAccountSelection}
-        title="Select Payment Account"
-        description={`Record payment for purchase order ${receivedOrderForAccount?.orderNumber} from ${receivedOrderForAccount?.supplierName}`}
-        amount={receivedOrderForAccount?.total || 0}
-        transactionType="outflow"
-        filterTypes={['bank', 'cash', 'asset']}
-      />
     </div>
   );
 };

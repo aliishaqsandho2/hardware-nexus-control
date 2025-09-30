@@ -59,12 +59,12 @@ const Orders = () => {
   const [isOrderDetailsOpen, setIsOrderDetailsOpen] = useState(false);
   const [isPDFExportModalOpen, setIsPDFExportModalOpen] = useState(false);
 
-  // Items per page for client-side pagination
+  // Items per page for server-side pagination
   const ITEMS_PER_PAGE = 20;
 
   useEffect(() => {
     fetchOrders();
-  }, [filterStatus, filterCustomer, dateFrom, dateTo]);
+  }, [filterStatus, filterCustomer, dateFrom, dateTo, currentPage]);
 
   // Reset to page 1 when search term changes
   useEffect(() => {
@@ -75,7 +75,8 @@ const Orders = () => {
     try {
       setLoading(true);
       const params: any = {
-        limit: 1000 // Fetch more records to handle client-side filtering
+        limit: ITEMS_PER_PAGE,
+        page: currentPage
       };
 
       if (filterStatus !== "all") {
@@ -97,24 +98,14 @@ const Orders = () => {
       const response = await salesApi.getAll(params);
       
       if (response.success) {
-        setOrders(response.data.sales);
+        setOrders(response.data.sales || []);
+        setTotalPages(response.data.pagination?.totalPages || 1);
         
-        // Calculate today's orders and margin
-        const today = new Date().toISOString().split('T')[0];
-        const todayOrders = response.data.sales.filter((order: Sale) => 
-          order.date === today
-        );
-        
-        const todayOrdersCount = todayOrders.length;
-        const todayMargin = todayOrders.reduce((total: number, order: Sale) => 
-          total + (order.subtotal - order.discount), 0
-        );
-        
-        // Update summary with today's data
-        setSummary({
-          ...response.data.summary,
-          todayOrders: todayOrdersCount,
-          todayMargin: todayMargin
+        // Update summary
+        setSummary(response.data.summary || {
+          totalSales: 0,
+          totalOrders: 0,
+          avgOrderValue: 0
         });
       }
     } catch (error) {
@@ -144,9 +135,9 @@ const Orders = () => {
     // No need to fetch again since we're doing client-side filtering
   };
 
-  // Filter orders based on search term and payment method
+  // Filter orders based on search term and payment method (client-side for current page)
   const filteredOrders = orders.filter(order => {
-    const matchesSearch = 
+    const matchesSearch = !searchTerm || 
       order.orderNumber.toLowerCase().includes(searchTerm.toLowerCase()) ||
       (order.customerName && order.customerName.toLowerCase().includes(searchTerm.toLowerCase())) ||
       order.items.some(item => item.productName.toLowerCase().includes(searchTerm.toLowerCase()));
@@ -155,12 +146,6 @@ const Orders = () => {
     
     return matchesSearch && matchesPaymentMethod;
   });
-
-  // Calculate pagination for filtered results
-  const totalFilteredPages = Math.ceil(filteredOrders.length / ITEMS_PER_PAGE);
-  const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
-  const endIndex = startIndex + ITEMS_PER_PAGE;
-  const paginatedOrders = filteredOrders.slice(startIndex, endIndex);
 
   const handlePageChange = (page: number) => {
     setCurrentPage(page);
@@ -315,9 +300,9 @@ const Orders = () => {
           />
 
           <OrdersTable
-            orders={paginatedOrders}
+            orders={filteredOrders}
             currentPage={currentPage}
-            totalPages={totalFilteredPages}
+            totalPages={totalPages}
             onViewOrder={handleViewOrder}
             onOrderPDF={handleOrderPDF}
             onPageChange={handlePageChange}

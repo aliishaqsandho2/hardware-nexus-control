@@ -33,8 +33,9 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { accountsApi, type Account } from "@/services/accountsApi";
+import PincodeProtection from "@/components/PincodeProtection";
 
-export default function Accounts() {
+function AccountsContent() {
   const { toast } = useToast();
   const [accounts, setAccounts] = useState<Account[]>([]);
   const [loading, setLoading] = useState(true);
@@ -719,5 +720,13 @@ export default function Accounts() {
         </Dialog>
       )}
     </div>
+  );
+}
+
+export default function Accounts() {
+  return (
+    <PincodeProtection title="Accounts Management">
+      <AccountsContent />
+    </PincodeProtection>
   );
 }

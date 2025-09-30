@@ -15,6 +15,8 @@ import { useToast } from "@/hooks/use-toast";
 import { useState, useEffect } from "react";
 import { apiConfig } from "@/utils/apiConfig";
 import { useFont, fontOptions } from "@/components/FontProvider";
+import { z } from "zod";
+import { verifyPin, changePin } from "@/utils/pin";
 
 export default function Settings() {
   const { toast } = useToast();
@@ -23,9 +25,103 @@ export default function Settings() {
   const [formData, setFormData] = useState<SettingsData | null>(null);
   const [apiBaseUrl, setApiBaseUrl] = useState(apiConfig.getBaseUrl());
 
+  const ADMIN_PASSWORD = "mirzausman@123";
+  const [adminPassword, setAdminPassword] = useState("");
+  const [oldPin, setOldPin] = useState("");
+  const [newPin, setNewPin] = useState("");
+  const [confirmPin, setConfirmPin] = useState("");
+  const [changing, setChanging] = useState(false);
+
+  const handleChangePin = async () => {
+    try {
+      setChanging(true);
+      const pinSchema = z.string().regex(/^\d{7}$/, { message: "Pincode must be exactly 7 digits" });
+
+      if (adminPassword !== ADMIN_PASSWORD) {
+        toast({
+          title: "Invalid credentials",
+          description: "Admin password is incorrect.",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      pinSchema.parse(oldPin);
+      pinSchema.parse(newPin);
+      if (newPin !== confirmPin) {
+        toast({ title: "Mismatch", description: "New pincode and confirmation do not match.", variant: "destructive" });
+        return;
+      }
+
+      const okOld = await verifyPin(oldPin);
+      if (!okOld) {
+        toast({ title: "Invalid current pincode", description: "Please enter the correct current pincode.", variant: "destructive" });
+        return;
+      }
+
+      if (oldPin === newPin) {
+        toast({ title: "No change", description: "New pincode must be different from current.", variant: "destructive" });
+        return;
+      }
+
+      const changed = await changePin(oldPin, newPin);
+      if (!changed) {
+        toast({ title: "Update failed", description: "Current pincode is incorrect.", variant: "destructive" });
+        return;
+      }
+
+      setAdminPassword("");
+      setOldPin("");
+      setNewPin("");
+      setConfirmPin("");
+      toast({ title: "Pincode updated", description: "Keep your pincode somewhere safe." });
+    } catch (e: any) {
+      toast({ title: "Validation error", description: e?.message || "Please check your inputs.", variant: "destructive" });
+    } finally {
+      setChanging(false);
+    }
+  };
+
   const { data: settingsData, isLoading } = useQuery({
     queryKey: ['settings'],
-    queryFn: () => settingsApi.getSettings(),
+    queryFn: async () => {
+      try {
+        return await settingsApi.getSettings();
+      } catch (error) {
+        // If API fails, return default data so Settings page still works
+        return {
+          profile: {
+            name: "Admin",
+            email: "admin@usmanhardware.com",
+            phone: "",
+            role: "Owner",
+          },
+          store: {
+            name: "Usman Hardware",
+            address: "",
+            currency: "PKR",
+            taxRate: 0,
+            lowStockThreshold: 10,
+            openTime: "09:00",
+            closeTime: "21:00",
+          },
+          notifications: {
+            newOrder: true,
+            lowStock: true,
+            paymentDue: true,
+            dailyTarget: false,
+          },
+          system: {
+            autoBackup: false,
+            dataRetention: 30,
+            cacheEnabled: true,
+            darkMode: true,
+          },
+        };
+      }
+    },
+    retry: false,
+    refetchOnWindowFocus: false,
   });
 
   const updateSettingsMutation = useMutation({
@@ -47,8 +143,10 @@ export default function Settings() {
   });
 
   useEffect(() => {
-    if (settingsData?.data) {
-      setFormData(settingsData.data);
+    if (settingsData) {
+      // Handle both API response format and fallback format
+      const data = 'data' in settingsData ? settingsData.data : settingsData;
+      setFormData(data);
     }
   }, [settingsData]);
 
@@ -369,6 +467,44 @@ export default function Settings() {
                     </p>
                   </div>
                 </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Pincode Settings */}
+          <Card className="mt-6">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Shield className="h-5 w-5" />
+                Pincode Settings
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <p className="text-sm text-muted-foreground">
+                Keep your Pincode somewhere safe. To change it, verify admin password and current pincode.
+              </p>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="adminPassword">Admin Password</Label>
+                  <Input id="adminPassword" type="password" value={adminPassword} onChange={(e) => setAdminPassword(e.target.value)} />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="oldPin">Current Pincode</Label>
+                  <Input id="oldPin" type="password" inputMode="numeric" maxLength={7} value={oldPin} onChange={(e) => setOldPin(e.target.value.replace(/\D/g, '').slice(0,7))} />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="newPin">New Pincode</Label>
+                  <Input id="newPin" type="password" inputMode="numeric" maxLength={7} value={newPin} onChange={(e) => setNewPin(e.target.value.replace(/\D/g, '').slice(0,7))} />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="confirmPin">Confirm New Pincode</Label>
+                  <Input id="confirmPin" type="password" inputMode="numeric" maxLength={7} value={confirmPin} onChange={(e) => setConfirmPin(e.target.value.replace(/\D/g, '').slice(0,7))} />
+                </div>
+              </div>
+              <div className="flex justify-end">
+                <Button onClick={handleChangePin} disabled={changing}>
+                  {changing ? 'Updating...' : 'Update Pincode'}
+                </Button>
               </div>
             </CardContent>
           </Card>

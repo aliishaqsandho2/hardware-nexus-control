@@ -44,11 +44,21 @@ export const ProductCard: React.FC<ProductCardProps> = ({
     }
   };
 
-  const handleAddCustomQuantity = async () => {
+  const handleAddCustomQuantity = () => {
     const quantity = parseFloat(quantityInput);
     
     if (quantityInput && !isNaN(quantity) && quantity > 0) {
-      // Quick add for better UX - skip heavy validation
+      // Skip heavy stock validation for better performance
+      // Basic stock check only
+      if (!product.incompleteQuantity && !product.needsQuantityUpdate && (product.stock || 0) < quantity) {
+        toast({
+          title: "Insufficient Stock",
+          description: `Only ${product.stock || 0} ${product.unit} available`,
+          variant: "destructive"
+        });
+        return;
+      }
+      
       onAddCustomQuantity(product);
     } else {
       toast({
@@ -59,16 +69,37 @@ export const ProductCard: React.FC<ProductCardProps> = ({
     }
   };
 
-  const handleQuantitySuggestion = async (quantity: number) => {
-    // Quick add for better UX - skip validation for speed
+  const handleQuantitySuggestion = (quantity: number) => {
+    // Skip heavy validation for better performance
+    // Basic stock check only
+    if (!product.incompleteQuantity && !product.needsQuantityUpdate && (product.stock || 0) < quantity) {
+      toast({
+        title: "Insufficient Stock",
+        description: `Only ${product.stock || 0} ${product.unit} available`,
+        variant: "destructive"
+      });
+      return;
+    }
+    
+    // Add the suggested quantity to cart
     onAddToCart(product, quantity);
   };
 
-  const handleQuickAdd = async () => {
+  const handleQuickAdd = () => {
     // Use quantity from input if available, otherwise default to 1
     const quantity = quantityInput && !isNaN(parseFloat(quantityInput)) ? parseFloat(quantityInput) : 1;
     
-    // Quick add for better UX - skip heavy validation
+    // Skip heavy validation for better performance  
+    // Basic stock check only
+    if (!product.incompleteQuantity && !product.needsQuantityUpdate && (product.stock || 0) < quantity) {
+      toast({
+        title: "Insufficient Stock",
+        description: `Only ${product.stock || 0} ${product.unit} available`,
+        variant: "destructive"
+      });
+      return;
+    }
+    
     onAddToCart(product, quantity);
   };
 

@@ -1,5 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { profitApi } from "@/services/profitApi";
+import { PincodeProtection } from "@/components/PincodeProtection";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -1114,7 +1115,11 @@ export default function Profit() {
   });
 
   return (
-    <div className="container mx-auto p-3 space-y-3">
+    <PincodeProtection 
+      title="Profit Analytics" 
+      description="Access detailed profit analysis and performance insights"
+    >
+      <div className="container mx-auto p-3 space-y-3">
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
@@ -1170,6 +1175,7 @@ export default function Profit() {
           <InsightsTab />
         </TabsContent>
       </Tabs>
-    </div>
+      </div>
+    </PincodeProtection>
   );
 }

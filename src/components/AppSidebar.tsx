@@ -119,11 +119,6 @@ const financeItems: MenuItem[] = [
     url: "/finances",
     icon: DollarSign,
   },
-  {
-    title: "Accounts",
-    url: "/accounts",
-    icon: Building2,
-  }
 ]
 
 // Analytics & Reports
@@ -132,6 +127,11 @@ const analyticsItems: MenuItem[] = [
     title: "Profit Analytics",
     url: "/profit",
     icon: PieChart,
+  },
+  {
+    title: "Accounts",
+    url: "/accounts",
+    icon: Building2,
   }
 ]
 

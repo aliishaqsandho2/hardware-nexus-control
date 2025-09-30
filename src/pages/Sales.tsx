@@ -9,10 +9,8 @@ import { Package, Search, Plus, Minus, Pin, PinOff, Filter, Menu, X, AlertTriang
 import { useToast } from "@/hooks/use-toast";
 import { salesApi, customersApi, productsApi, suppliersApi } from "@/services/api";
 import { newFinanceApi } from "@/services/newFinanceApi";
+import { accountsApi } from "@/services/accountsApi";
 import { QuickCustomerForm } from "@/components/QuickCustomerForm";
-import { AccountSelectionModal } from "@/components/shared/AccountSelectionModal";
-import { useCashflowManager } from "@/hooks/useCashflowManager";
-import { type Account } from "@/services/accountsApi";
 import { TodaysOrdersModal } from "@/components/sales/TodaysOrdersModal";
 import { ProductCard } from "@/components/sales/ProductCard";
 import { CartSidebar } from "@/components/sales/CartSidebar";
@@ -41,7 +39,6 @@ interface CartItem {
 const Sales = () => {
   const { toast } = useToast();
   const isMobile = useIsMobile();
-  const { createSaleCashflow, createCancellationCashflow } = useCashflowManager();
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
   const [products, setProducts] = useState<any[]>([]);
@@ -55,11 +52,8 @@ const Sales = () => {
   const [todaysOrders, setTodaysOrders] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [pinnedProducts, setPinnedProducts] = useState<number[]>([]);
-  const [selectedAccount, setSelectedAccount] = useState<Account | null>(null);
-  const [selectedAccountId, setSelectedAccountId] = useState<string>("");
+  const [paymentMethod, setPaymentMethod] = useState("cash");
   const [orderStatus, setOrderStatus] = useState("completed");
-  const [isAccountSelectionOpen, setIsAccountSelectionOpen] = useState(false);
-  const [pendingCheckoutData, setPendingCheckoutData] = useState<any>(null);
   const [quantityInputs, setQuantityInputs] = useState<{[key: number]: string}>({});
   const [isCartOpen, setIsCartOpen] = useState(false);
   const [isCustomerDialogOpen, setIsCustomerDialogOpen] = useState(false);
@@ -148,7 +142,6 @@ const formatPakistaniTime = (timeString: string): string => {
     fetchProducts();
     fetchCustomers();
     fetchTodaysOrders();
-    loadDefaultCashAccount();
     // Load pinned products from localStorage
     const saved = localStorage.getItem('pinnedProducts');
     if (saved) {
@@ -230,33 +223,6 @@ const formatPakistaniTime = (timeString: string): string => {
     } catch (error) {
       console.error('Failed to fetch today\'s orders:', error);
       setTodaysOrders([]);
-    }
-  };
-
-  const loadDefaultCashAccount = async () => {
-    try {
-      const { accountsApi } = await import('@/services/accountsApi');
-      const response = await accountsApi.getAccounts({ 
-        active: true,
-        limit: 100 
-      });
-      
-      if (response.success) {
-        const accountsData = (response.data as any)?.accounts || response.data || [];
-        const accounts = Array.isArray(accountsData) ? accountsData : [];
-        
-        // Find Cash as default
-        const cashAccount = accounts.find((acc: Account) => 
-          acc.account_type === 'cash' && acc.is_active
-        );
-        
-        if (cashAccount) {
-          setSelectedAccount(cashAccount);
-          setSelectedAccountId(cashAccount.id.toString());
-        }
-      }
-    } catch (error) {
-      console.error('Failed to load default Cash:', error);
     }
   };
 
@@ -345,10 +311,7 @@ const formatPakistaniTime = (timeString: string): string => {
     // Clear the quantity input for this product
     setQuantityInputs(prev => ({...prev, [product.id]: ""}));
 
-    toast({
-      title: "Added to Cart",
-      description: `${formatQuantity(roundedQuantity)} ${product.unit} of ${product.name} added to cart`,
-    });
+    // Remove the "Added to Cart" notification as requested by client
   };
 
   const updateCartQuantity = (productId: number, quantity: number) => {
@@ -446,25 +409,11 @@ const formatPakistaniTime = (timeString: string): string => {
     }
   };
 
-  const handleAccountChange = (accountId: string, account: Account) => {
-    setSelectedAccount(account);
-    setSelectedAccountId(accountId);
-  };
-
   const handleCheckout = async () => {
     if (cart.length === 0) {
       toast({
         title: "Empty Cart",
         description: "Please add items to cart before checkout",
-        variant: "destructive"
-      });
-      return;
-    }
-
-    if (!selectedAccount || !selectedAccountId) {
-      toast({
-        title: "Account Required",
-        description: "Please select a payment account before checkout",
         variant: "destructive"
       });
       return;
@@ -480,53 +429,40 @@ const formatPakistaniTime = (timeString: string): string => {
       return;
     }
 
-    // Calculate total without any tax
-    const totalAmount = cart.reduce((sum, item) => {
-      const finalPrice = item.adjustedPrice || item.price;
-      return sum + (finalPrice * item.quantity);
-    }, 0);
-
-    // POS sale is an inflow — no balance check required
-
-    // Set up pending checkout data for the sale
-    const checkoutData = {
-      totalAmount,
-      customerId: selectedCustomer?.id || null,
-      customerName: selectedCustomer?.name || null,
-      date: new Date().toISOString().split('T')[0],
-      time: new Date().toLocaleTimeString('en-GB', { hour12: false }),
-      items: cart.map(item => ({
-        productId: item.productId,
-        productName: item.name,
-        quantity: item.quantity,
-        unitPrice: item.adjustedPrice || item.price,
-        total: (item.adjustedPrice || item.price) * item.quantity,
-        isOutsourced: item.isOutsourced || false,
-        outsourcingSupplierId: item.outsourcingSupplierId,
-        outsourcingCostPerUnit: item.outsourcingCostPerUnit,
-        outsourcingSupplierName: item.outsourcingSupplierName,
-        outsourcingNotes: item.outsourcingNotes
-      })),
-      status: orderStatus,
-      createdBy: "POS User",
-      createdAt: new Date().toISOString()
-    };
-
-    setPendingCheckoutData(checkoutData);
-
-    // Proceed with checkout directly since account is already selected (avoid state race)
-    await processSale(selectedAccountId, selectedAccount, checkoutData);
-  };
-
-  // Core sale processing to avoid state timing issues
-  const processSale = async (accountId: string, account: Account, saleDataSource: any) => {
     try {
       setIsProcessingSale(true); // Set processing flag to prevent double-clicks
       
+      // Calculate total without any tax
+      const totalAmount = cart.reduce((sum, item) => {
+        const finalPrice = item.adjustedPrice || item.price;
+        return sum + (finalPrice * item.quantity);
+      }, 0);
+
       const saleData = {
-        ...saleDataSource,
-        paymentMethod: `${account.account_type}-${account.account_name}`, // For backward compatibility
-        accountId: parseInt(accountId)
+        customerId: selectedCustomer?.id || null,
+        customerName: selectedCustomer?.name || "Walk-in Customer",
+        items: cart.map(item => ({
+          productId: item.productId,
+          quantity: item.quantity,
+          unitPrice: item.adjustedPrice || item.price,
+          totalPrice: (item.adjustedPrice || item.price) * item.quantity,
+          // Outsourcing data - structure matches backend expectation
+          ...(item.isOutsourced && item.outsourcingSupplierId && {
+            outsourcing: {
+              supplierId: item.outsourcingSupplierId,
+              costPerUnit: item.outsourcingCostPerUnit,
+              notes: item.outsourcingNotes
+            }
+          })
+        })),
+        totalAmount: totalAmount, // Pure total without tax
+        subtotal: totalAmount, // Same as total since no tax
+        tax: 0, // Explicitly set tax to 0
+        discount: 0,
+        paymentMethod: paymentMethod,
+        status: orderStatus,
+        saleDate: new Date().toISOString(),
+        notes: selectedCustomer ? `Sale to ${selectedCustomer.name}` : "Walk-in customer sale"
       };
 
       console.log('Sending sale data:', saleData);
@@ -534,24 +470,6 @@ const formatPakistaniTime = (timeString: string): string => {
       const response = await salesApi.create(saleData);
       
       if (response.success) {
-        // Create cashflow entry for the sale
-        try {
-          await createSaleCashflow(
-            saleDataSource.totalAmount,
-            parseInt(accountId),
-            account,
-            response.data?.orderNumber || `UH-${Date.now()}`,
-            selectedCustomer?.name
-          );
-        } catch (cashflowError) {
-          console.error('Failed to create sale cashflow:', cashflowError);
-          // Don't break the sale flow if cashflow fails, but notify
-          toast({
-            title: "Sale Completed with Warning",
-            description: "Sale was recorded but cashflow entry failed. Please check manually.",
-            variant: "default"
-          });
-        }
         // AUTO-GENERATE RECEIPT after successful sale
         await generateReceiptPDF({
           id: response.data?.id || Date.now(),
@@ -567,28 +485,77 @@ const formatPakistaniTime = (timeString: string): string => {
             unitPrice: item.adjustedPrice || item.price,
             total: (item.adjustedPrice || item.price) * item.quantity
           })),
-          subtotal: saleDataSource.totalAmount,
+          subtotal: totalAmount,
           discount: 0,
           tax: 0,
-          total: saleDataSource.totalAmount,
-          paymentMethod: `${account.account_type}-${account.account_name}`,
+          total: totalAmount,
+          paymentMethod: paymentMethod,
           status: orderStatus,
           createdBy: "POS User",
           createdAt: new Date().toISOString()
         });
 
-        // Old cashflow handling - remove this section
         // Add cash flow entry for completed sale (credit/inflow)
-        // This is now handled by createSaleCashflow above
+        try {
+          // Determine account based on payment method
+          let accountId: number | undefined;
+          
+          if (paymentMethod.toLowerCase() === 'cash') {
+            // Find Cash account using the same approach as PurchaseOrders
+            const accountsResponse = await newFinanceApi.getAccounts({ type: 'cash', active: true });
+            if (accountsResponse.success && accountsResponse.data) {
+              const cashAccount = accountsResponse.data.find((acc: any) => 
+                acc.account_type?.toLowerCase() === 'cash' || acc.account_name?.toLowerCase().includes('cash')
+              );
+              
+              if (cashAccount) {
+                accountId = parseInt(cashAccount.id);
+                console.log('Found cash account:', cashAccount);
+              } else {
+                console.log('No cash account found in response');
+              }
+            }
+          } else if (paymentMethod.toLowerCase() === 'bank_transfer' || paymentMethod.toLowerCase() === 'card') {
+            // Find Bank account using the same approach as PurchaseOrders
+            const accountsResponse = await newFinanceApi.getAccounts({ type: 'bank', active: true });
+            if (accountsResponse.success && accountsResponse.data) {
+              const bankAccount = accountsResponse.data.find((acc: any) => 
+                acc.account_type?.toLowerCase() === 'bank' || acc.account_name?.toLowerCase().includes('bank')
+              );
+              
+              if (bankAccount) {
+                accountId = parseInt(bankAccount.id);
+                console.log('Found bank account:', bankAccount);
+              } else {
+                console.log('No bank account found in response');
+              }
+            }
+          }
+
+          // Create cashflow entry
+          const cashFlowResponse = await newFinanceApi.createFinanceCashFlow({
+            type: 'inflow',
+            amount: totalAmount,
+            date: new Date().toISOString().split('T')[0],
+            account_id: accountId,
+            reference: response.data?.orderNumber || `Sale-${Date.now()}`,
+            description: `Sale completed - ${selectedCustomer?.name || 'Walk-in Customer'} - ${paymentMethod} payment`
+          });
+          
+          console.log('Cash flow entry created successfully:', cashFlowResponse);
+        } catch (cashFlowError) {
+          console.error('Failed to create cash flow entry for sale:', cashFlowError);
+          // Don't break the sale flow if cash flow fails
+        }
 
         setCart([]);
         setSelectedCustomer(null);
         setQuantityInputs({});
-        setPendingCheckoutData(null);
+        setPaymentMethod("cash");
         fetchTodaysOrders();
         toast({
           title: "Sale Completed Successfully",
-          description: `Order processed successfully. Account: ${account.account_name}. Total: PKR ${saleDataSource.totalAmount.toFixed(2)}. Receipt downloaded automatically.`,
+          description: `Order has been processed with status: ${orderStatus}. Payment: ${paymentMethod}. Total: PKR ${saleData.totalAmount.toFixed(2)}. Receipt downloaded automatically.`,
         });
       } else {
         throw new Error(response.message || 'Failed to process sale');
@@ -603,11 +570,6 @@ const formatPakistaniTime = (timeString: string): string => {
     } finally {
       setIsProcessingSale(false); // Reset processing flag
     }
-  };
-
-  const handleAccountSelection = async (accountId: string, account: Account) => {
-    if (!pendingCheckoutData) return;
-    await processSale(accountId, account, pendingCheckoutData);
   };
 
   // Helper to calculate dynamic receipt height
@@ -1128,8 +1090,7 @@ const formatPakistaniTime = (timeString: string): string => {
           selectedCustomer={selectedCustomer}
           customers={customers}
           orderStatus={orderStatus}
-          selectedAccount={selectedAccount}
-          selectedAccountId={selectedAccountId}
+          paymentMethod={paymentMethod}
           isCustomerDialogOpen={isCustomerDialogOpen}
           isQuickCustomerOpen={isQuickCustomerOpen}
           isCollapsed={isCartCollapsed}
@@ -1138,13 +1099,13 @@ const formatPakistaniTime = (timeString: string): string => {
           onSetIsCustomerDialogOpen={setIsCustomerDialogOpen}
           onSetIsQuickCustomerOpen={setIsQuickCustomerOpen}
           onSetOrderStatus={setOrderStatus}
+          onSetPaymentMethod={setPaymentMethod}
           onUpdateCartQuantity={updateCartQuantity}
           onRemoveFromCart={removeFromCart}
           onCheckout={handleCheckout}
           onUpdateItemPrice={updateItemPrice}
           onToggleCollapse={() => setIsCartCollapsed(!isCartCollapsed)}
           onOutsourceItem={handleOutsourceItem}
-          onAccountChange={handleAccountChange}
         />
       </div>
 
@@ -1239,7 +1200,7 @@ const formatPakistaniTime = (timeString: string): string => {
                     setIsCartOpen(false);
                   }}
                 >
-                  {isProcessingSale ? 'Processing Sale...' : `Complete Sale ${selectedAccount ? `(${selectedAccount.account_name})` : ''}`}
+                  {isProcessingSale ? 'Processing Sale...' : `Complete Sale (${paymentMethod})`}
                 </Button>
               </div>
             )}
@@ -1270,20 +1231,6 @@ const formatPakistaniTime = (timeString: string): string => {
         onOpenChange={setIsQuickProductAddOpen}
         onProductAdded={handleProductAdded}
         categories={categories}
-      />
-      {/* Account Selection Modal */}
-      <AccountSelectionModal
-        isOpen={isAccountSelectionOpen}
-        onClose={() => {
-          setIsAccountSelectionOpen(false);
-          setPendingCheckoutData(null);
-        }}
-        onConfirm={handleAccountSelection}
-        title="Select Payment Account"
-        description="Choose the account where this sale amount will be credited."
-        amount={pendingCheckoutData?.totalAmount || 0}
-        transactionType="inflow"
-        filterTypes={['bank', 'cash', 'asset']}
       />
     </div>
   );

@@ -61,47 +61,16 @@ export const OrdersTable = ({
     }
   };
 
-  // Normalized text label for payment method
-  const getPaymentMethodLabel = (method: string) => {
-    const raw = (method ?? '').toString().trim();
-    if (!raw || raw === 'undefined' || raw === 'null') {
-      // Default to Cash if backend omitted value (new POS flow always selects an account)
-      return 'Cash';
-    }
-
-    // New account-based format: "{type}-{account_name}"
-    if (raw.includes('-')) {
-      const [type, ...nameParts] = raw.split('-');
-      const t = (type || '').toLowerCase();
-      if (t === 'cash') return 'Cash';
-      if (['bank', 'savings', 'current', 'checking'].includes(t)) return 'Bank Account';
-      if (t === 'credit') return 'Credit Account';
-      const accountName = nameParts.join('-').trim();
-      return accountName || type;
-    }
-
-    // Legacy keywords
-    const m = raw.toLowerCase();
-    if (m === 'cash') return 'Cash';
-    if (['bank', 'bank_transfer', 'savings', 'current', 'checking'].includes(m)) return 'Bank Account';
-    if (m === 'credit') return 'Credit Account';
-    if (m === 'card') return 'Card Payment';
-    return raw;
-  };
-
   const getPaymentMethodBadge = (method: string) => {
-    const label = getPaymentMethodLabel(method);
-    switch (label) {
-      case 'Cash':
-        return <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200">{label}</Badge>;
-      case 'Bank Account':
-        return <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-200">{label}</Badge>;
-      case 'Credit Account':
-        return <Badge variant="outline" className="bg-purple-50 text-purple-700 border-purple-200">{label}</Badge>;
-      case 'Card Payment':
-        return <Badge variant="outline" className="bg-purple-50 text-purple-700 border-purple-200">{label}</Badge>;
+    switch (method) {
+      case "cash":
+        return <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200">Cash</Badge>;
+      case "credit":
+        return <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-200">Credit</Badge>;
+      case "card":
+        return <Badge variant="outline" className="bg-purple-50 text-purple-700 border-purple-200">Card</Badge>;
       default:
-        return <Badge variant="outline" className="bg-slate-50 text-slate-700 border-slate-200">{label}</Badge>;
+        return <Badge variant="outline">{method}</Badge>;
     }
   };
 
@@ -271,7 +240,7 @@ export const OrdersTable = ({
                               <div className="grid grid-cols-2 md:grid-cols-4 gap-4 p-3 bg-muted/30 rounded-lg border border-border">
                                 <div className="text-sm">
                                   <span className="font-medium text-muted-foreground">Payment Method: </span>
-                                  <span className="text-foreground">{getPaymentMethodLabel(order.paymentMethod)}</span>
+                                  <span className="text-foreground">{order.paymentMethod}</span>
                                 </div>
                                 <div className="text-sm">
                                   <span className="font-medium text-muted-foreground">Time: </span>

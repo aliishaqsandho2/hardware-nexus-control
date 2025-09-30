@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { PincodeProtection } from "@/components/PincodeProtection";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
@@ -99,7 +100,11 @@ const Finances = () => {
   };
 
   return (
-    <div className="space-y-6 p-6">
+    <PincodeProtection 
+      title="Financial Management" 
+      description="Access comprehensive financial oversight and control"
+    >
+      <div className="space-y-6 p-6">
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
@@ -224,7 +229,8 @@ const Finances = () => {
           </Tabs>
         </CardContent>
       </Card>
-    </div>
+      </div>
+    </PincodeProtection>
   );
 };
 

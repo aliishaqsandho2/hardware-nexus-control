@@ -1,5 +1,3 @@
-
-import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Search } from "lucide-react";
@@ -17,7 +15,6 @@ interface OrdersFiltersProps {
   setDateTo: (value: string) => void;
   filterCustomer: string;
   setFilterCustomer: (value: string) => void;
-  onSearch: () => void;
 }
 
 export const OrdersFilters = ({
@@ -32,8 +29,7 @@ export const OrdersFilters = ({
   dateTo,
   setDateTo,
   filterCustomer,
-  setFilterCustomer,
-  onSearch
+  setFilterCustomer
 }: OrdersFiltersProps) => {
   return (
     <>
@@ -41,15 +37,12 @@ export const OrdersFilters = ({
         <div className="relative flex-1">
           <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-400 h-4 w-4" />
           <Input
-            placeholder="Search by order number, customer, or product..."
+            placeholder="Search by order number, customer name..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
             className="pl-10"
           />
         </div>
-        <Button onClick={onSearch} className="bg-blue-600 hover:bg-blue-700">
-          Search
-        </Button>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-5 gap-4 mb-6">

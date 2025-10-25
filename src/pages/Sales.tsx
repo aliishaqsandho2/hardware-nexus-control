@@ -59,7 +59,7 @@ const Sales = () => {
   const [isCustomerDialogOpen, setIsCustomerDialogOpen] = useState(false);
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [isCartCollapsed, setIsCartCollapsed] = useState(false);
-  const [productsLayout, setProductsLayout] = useState(5); // Default to 5 products per line
+  const [productsLayout, setProductsLayout] = useState(1); // Default to slim view
   const [isProcessingSale, setIsProcessingSale] = useState(false); // Prevent double-clicking complete sale
 
   // Load layout preference from localStorage
@@ -193,7 +193,8 @@ const formatPakistaniTime = (timeString: string): string => {
 
   const fetchCustomers = async () => {
     try {
-      const response = await customersApi.getAll({ limit: 100 });
+      // Fetch all customers without limit for comprehensive search
+      const response = await customersApi.getAll({ limit: 10000 });
       if (response.success) {
         const customersData = response.data?.customers || response.data || [];
         setCustomers(Array.isArray(customersData) ? customersData : []);

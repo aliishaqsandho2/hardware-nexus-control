@@ -10,10 +10,11 @@ import { Textarea } from "@/components/ui/textarea";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Separator } from "@/components/ui/separator";
-import { Users, Search, Plus, Edit, CreditCard, Phone, MapPin, Calendar, Mail, Building, IdCard, Receipt, History, AlertCircle, Banknote, Download } from "lucide-react";
+import { Users, Search, Plus, Edit, CreditCard, Phone, MapPin, Calendar, Mail, Building, IdCard, Receipt, History, AlertCircle, Banknote, Download, Trash2, Archive } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { customersApi } from "@/services/api";
 import { CustomerEditModal } from "@/components/customers/CustomerEditModal";
+import { apiConfig } from "@/utils/apiConfig";
 
 import { CustomersList } from "@/components/customers/CustomersList";
 import { CustomersPagination } from "@/components/customers/CustomersPagination";
@@ -29,6 +30,9 @@ const Customers = () => {
   const [customers, setCustomers] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [customersLoading, setCustomersLoading] = useState(false);
+  const [activeTab, setActiveTab] = useState("active");
+  const [inactiveCustomers, setInactiveCustomers] = useState<any[]>([]);
+  const [inactiveLoading, setInactiveLoading] = useState(false);
   
   const [pagination, setPagination] = useState({
     currentPage: 1,
@@ -137,6 +141,105 @@ const Customers = () => {
   const handlePageChange = (page: number) => {
     fetchCustomers(page, searchTerm, customerTypeFilter);
   };
+
+  // Fetch inactive customers
+  const fetchInactiveCustomers = useCallback(async () => {
+    try {
+      setInactiveLoading(true);
+      const params: any = {
+        page: 1,
+        limit: 10000,
+        status: 'inactive'
+      };
+      
+      console.log('Fetching inactive customers with params:', params);
+      const response = await customersApi.getAll(params);
+      console.log('Inactive API Response:', response);
+      
+      if (response.success) {
+        const apiData = response.data;
+        const customersArray = apiData?.customers || [];
+        setInactiveCustomers(customersArray);
+      } else {
+        console.error('API returned error:', response);
+        setInactiveCustomers([]);
+      }
+    } catch (error) {
+      console.error('Failed to fetch inactive customers:', error);
+      setInactiveCustomers([]);
+    } finally {
+      setInactiveLoading(false);
+    }
+  }, []);
+
+  // Handle delete single customer
+  const handleDeleteCustomer = async (customerId: number) => {
+    if (!confirm('Are you sure you want to delete this customer? This action cannot be undone.')) {
+      return;
+    }
+    
+    try {
+      // API call to delete customer (you'll implement on backend)
+      const response = await fetch(`${apiConfig.getBaseUrl()}/customers/${customerId}`, {
+        method: 'DELETE'
+      });
+      
+      if (response.ok) {
+        toast({
+          title: "Customer Deleted",
+          description: "Customer has been deleted successfully."
+        });
+        fetchInactiveCustomers();
+      } else {
+        throw new Error('Failed to delete customer');
+      }
+    } catch (error) {
+      console.error('Failed to delete customer:', error);
+      toast({
+        title: "Error",
+        description: "Failed to delete customer",
+        variant: "destructive"
+      });
+    }
+  };
+
+  // Handle delete all inactive customers
+  const handleDeleteAllInactive = async () => {
+    if (!confirm('Are you sure you want to delete ALL inactive customers? This action cannot be undone.')) {
+      return;
+    }
+    
+    try {
+      // API call to delete all inactive customers (you'll implement on backend)
+      const response = await fetch(`${apiConfig.getBaseUrl()}/customers/inactive/bulk-delete`, {
+        method: 'DELETE'
+      });
+      
+      if (response.ok) {
+        toast({
+          title: "All Inactive Customers Deleted",
+          description: "All inactive customers have been deleted successfully."
+        });
+        setInactiveCustomers([]);
+      } else {
+        throw new Error('Failed to delete customers');
+      }
+    } catch (error) {
+      console.error('Failed to delete all inactive customers:', error);
+      toast({
+        title: "Error",
+        description: "Failed to delete all inactive customers",
+        variant: "destructive"
+      });
+    }
+  };
+
+  // Load inactive customers when tab changes
+  useEffect(() => {
+    if (activeTab === 'inactive') {
+      fetchInactiveCustomers();
+    }
+  }, [activeTab, fetchInactiveCustomers]);
 
 
   const handleAddCustomer = async (formData: any) => {
@@ -373,56 +476,197 @@ const Customers = () => {
         </Card>
       </div>
 
-      {/* Search and Filter */}
-      <Card>
-        <CardContent className="p-4">
-          <div className="flex flex-col md:flex-row gap-4">
-            <div className="relative flex-1">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
-              <Input
-                placeholder="Search customers by name, phone, or email..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="pl-10"
-              />
-            </div>
-            <Select value={customerTypeFilter} onValueChange={setCustomerTypeFilter}>
-              <SelectTrigger className="w-full md:w-48">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {customerTypes.map((type) => (
-                  <SelectItem key={type.value} value={type.value}>
-                    {type.label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-        </CardContent>
-      </Card>
+      {/* Tabs for Active and Inactive Customers */}
+      <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+        <TabsList className="grid w-full max-w-md grid-cols-2">
+          <TabsTrigger value="active">
+            <Users className="h-4 w-4 mr-2" />
+            Active Customers
+          </TabsTrigger>
+          <TabsTrigger value="inactive">
+            <Archive className="h-4 w-4 mr-2" />
+            Old Customers
+          </TabsTrigger>
+        </TabsList>
 
-      {/* Customers List */}
-      <CustomersList
-        customers={customers}
-        loading={customersLoading}
-        onSelectCustomer={setSelectedCustomer}
-        onEditCustomer={handleEditCustomer}
-      />
+        {/* Active Customers Tab */}
+        <TabsContent value="active" className="space-y-3 mt-3">
+          {/* Search and Filter */}
+          <Card>
+            <CardContent className="p-4">
+              <div className="flex flex-col md:flex-row gap-4">
+                <div className="relative flex-1">
+                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
+                  <Input
+                    placeholder="Search customers by name, phone, or email..."
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                    className="pl-10"
+                  />
+                </div>
+                <Select value={customerTypeFilter} onValueChange={setCustomerTypeFilter}>
+                  <SelectTrigger className="w-full md:w-48">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {customerTypes.map((type) => (
+                      <SelectItem key={type.value} value={type.value}>
+                        {type.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </CardContent>
+          </Card>
 
-      {/* Pagination */}
-      <Card>
-        <CardContent className="p-4">
-          <CustomersPagination
-            currentPage={pagination.currentPage}
-            totalPages={pagination.totalPages}
-            totalItems={pagination.totalItems}
-            itemsPerPage={pagination.itemsPerPage}
-            onPageChange={handlePageChange}
+          {/* Customers List */}
+          <CustomersList
+            customers={customers}
             loading={customersLoading}
+            onSelectCustomer={setSelectedCustomer}
+            onEditCustomer={handleEditCustomer}
           />
-        </CardContent>
-      </Card>
+
+          {/* Pagination */}
+          <Card>
+            <CardContent className="p-4">
+              <CustomersPagination
+                currentPage={pagination.currentPage}
+                totalPages={pagination.totalPages}
+                totalItems={pagination.totalItems}
+                itemsPerPage={pagination.itemsPerPage}
+                onPageChange={handlePageChange}
+                loading={customersLoading}
+              />
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        {/* Inactive Customers Tab */}
+        <TabsContent value="inactive" className="space-y-3 mt-3">
+          {/* Delete All Button */}
+          {inactiveCustomers.length > 0 && (
+            <Card>
+              <CardContent className="p-4">
+                <div className="flex justify-between items-center">
+                  <div>
+                    <h3 className="font-semibold text-foreground">Old Customers ({inactiveCustomers.length})</h3>
+                    <p className="text-sm text-muted-foreground">These customers are marked as inactive</p>
+                  </div>
+                  <Button 
+                    variant="destructive"
+                    onClick={handleDeleteAllInactive}
+                    disabled={inactiveLoading}
+                  >
+                    <Trash2 className="h-4 w-4 mr-2" />
+                    Delete All Old Customers
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+          )}
+
+          {/* Inactive Customers List with Delete Buttons */}
+          <Card>
+            <CardContent className="p-6">
+              {inactiveLoading ? (
+                <div className="text-center py-8">
+                  <div className="text-lg text-muted-foreground">Loading old customers...</div>
+                </div>
+              ) : inactiveCustomers.length === 0 ? (
+                <div className="text-center py-8">
+                  <Archive className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+                  <p className="text-lg text-muted-foreground">No inactive customers found</p>
+                </div>
+              ) : (
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                  {inactiveCustomers.map((customer) => (
+                    <Card key={customer.id} className="hover:shadow-lg transition-shadow border-orange-200">
+                      <CardHeader className="pb-3">
+                        <div className="flex items-start justify-between">
+                          <div className="flex-1">
+                            <div className="flex items-center gap-2 mb-1">
+                              <CardTitle className="text-lg text-foreground">{customer.name}</CardTitle>
+                              <Badge className="text-xs bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-100">
+                                {customer.type || 'business'}
+                              </Badge>
+                              <Badge className="text-xs bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-100">
+                                Inactive
+                              </Badge>
+                            </div>
+                            <div className="flex items-center gap-2 text-sm text-muted-foreground mt-1">
+                              <Phone className="h-4 w-4" />
+                              {customer.phone || 'No phone'}
+                            </div>
+                          </div>
+                          <div className="flex flex-col gap-2">
+                            {(customer.currentBalance || 0) > 0 && (
+                              <Badge variant="destructive" className="ml-2">
+                                Due: PKR {customer.currentBalance?.toLocaleString()}
+                              </Badge>
+                            )}
+                          </div>
+                        </div>
+                      </CardHeader>
+                      <CardContent className="space-y-4">
+                        <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                          <MapPin className="h-4 w-4" />
+                          <span className="truncate">{customer.address || 'Address not provided'}</span>
+                        </div>
+
+                        {customer.email && (
+                          <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                            <Mail className="h-4 w-4" />
+                            <span className="truncate">{customer.email}</span>
+                          </div>
+                        )}
+
+                        <div className="grid grid-cols-2 gap-4 text-sm">
+                          <div>
+                            <p className="text-muted-foreground">Total Purchases</p>
+                            <p className="font-bold text-green-600">PKR {customer.totalPurchases?.toLocaleString() || '0'}</p>
+                          </div>
+                          <div>
+                            <p className="text-muted-foreground">Credit Limit</p>
+                            <p className="font-medium text-foreground">PKR {customer.creditLimit?.toLocaleString() || '0'}</p>
+                          </div>
+                        </div>
+
+                        {customer.lastPurchase && (
+                          <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                            <Calendar className="h-4 w-4" />
+                            <span>Last purchase: {customer.lastPurchase}</span>
+                          </div>
+                        )}
+
+                        <div className="flex gap-2">
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            className="flex-1"
+                            onClick={() => setSelectedCustomer(customer)}
+                          >
+                            View Details
+                          </Button>
+                          <Button
+                            variant="destructive"
+                            size="sm"
+                            onClick={() => handleDeleteCustomer(customer.id)}
+                          >
+                            <Trash2 className="h-4 w-4 mr-1" />
+                            Delete
+                          </Button>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  ))}
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
+      </Tabs>
 
       {/* Customer Details Dialog */}
       {selectedCustomer && (
@@ -451,7 +695,7 @@ const Customers = () => {
 const CustomerDialog = ({ onSubmit, onClose }: { onSubmit: (data: any) => void; onClose: () => void }) => {
   const [formData, setFormData] = useState({
     name: "", 
-    phone: "", 
+    phone: "+92", 
     email: "", 
     address: "", 
     city: "",
@@ -461,12 +705,21 @@ const CustomerDialog = ({ onSubmit, onClose }: { onSubmit: (data: any) => void; 
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    
+    if (!formData.name.trim()) {
+      return;
+    }
+    
+    if (!formData.phone.trim() || formData.phone.trim() === "+92") {
+      return;
+    }
+    
     onSubmit({
       ...formData,
       creditLimit: parseFloat(formData.creditLimit) || 0
     });
     setFormData({ 
-      name: "", phone: "", email: "", address: "", city: "", type: "Permanent", creditLimit: "" 
+      name: "", phone: "+92", email: "", address: "", city: "", type: "Permanent", creditLimit: "" 
     });
   };
 
@@ -478,7 +731,7 @@ const CustomerDialog = ({ onSubmit, onClose }: { onSubmit: (data: any) => void; 
       <form onSubmit={handleSubmit} className="space-y-4">
         <div className="grid grid-cols-2 gap-4">
           <div>
-            <Label htmlFor="name">Customer Name</Label>
+            <Label htmlFor="name">Customer Name *</Label>
             <Input
               id="name"
               value={formData.name}
@@ -487,12 +740,20 @@ const CustomerDialog = ({ onSubmit, onClose }: { onSubmit: (data: any) => void; 
             />
           </div>
           <div>
-            <Label htmlFor="phone">Phone Number (Optional)</Label>
+            <Label htmlFor="phone">Phone Number *</Label>
             <Input
               id="phone"
               value={formData.phone}
-              onChange={(e) => setFormData({...formData, phone: e.target.value})}
-              placeholder="Enter phone number (optional)"
+              onChange={(e) => {
+                const value = e.target.value;
+                if (!value.startsWith("+92")) {
+                  setFormData({...formData, phone: "+92"});
+                } else {
+                  setFormData({...formData, phone: value});
+                }
+              }}
+              placeholder="+92XXXXXXXXXX"
+              required
             />
           </div>
         </div>
@@ -552,7 +813,13 @@ const CustomerDialog = ({ onSubmit, onClose }: { onSubmit: (data: any) => void; 
         </div>
 
         <div className="flex gap-2 pt-4">
-          <Button type="submit" className="flex-1">Add Customer</Button>
+          <Button 
+            type="submit" 
+            className="flex-1"
+            disabled={!formData.name.trim() || !formData.phone.trim() || formData.phone.trim() === "+92"}
+          >
+            Add Customer
+          </Button>
           <Button type="button" variant="outline" onClick={onClose}>Cancel</Button>
         </div>
       </form>

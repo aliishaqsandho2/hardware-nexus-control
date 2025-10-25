@@ -29,6 +29,7 @@ import Profile from "./pages/Profile";
 import Employees from "./pages/Employees";
 import OutsourcedOrders from "./pages/OutsourcedOrders";
 import Profit from "./pages/Profit";
+import Credits from "./pages/Credits";
 
 const queryClient = new QueryClient();
 
@@ -53,9 +54,9 @@ const App = () => (
                     <Route path="/sales" element={<Sales />} />
                     <Route path="/orders" element={<Orders />} />
                     <Route path="/outsourced-orders" element={<OutsourcedOrders />} />
-                    <Route path="/customers" element={<Customers />} />
-                    
-                    <Route path="/suppliers" element={<Suppliers />} />
+                     <Route path="/customers" element={<Customers />} />
+                     <Route path="/credits" element={<Credits />} />
+                     <Route path="/suppliers" element={<Suppliers />} />
                     <Route path="/purchase-orders" element={<PurchaseOrders />} />
                     <Route path="/quotations" element={<Quotations />} />
                      <Route path="/customer-insights" element={<CustomerInsights />} />

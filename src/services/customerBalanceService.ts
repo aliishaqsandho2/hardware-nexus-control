@@ -25,6 +25,12 @@ export interface CustomerBalanceDetails {
   transactions: BalanceTransaction[];
 }
 
+export interface TransactionHistoryResponse {
+  transactions: any[];
+  total: number;
+  has_more: boolean;
+}
+
 export interface BalanceUpdateRequest {
   customerId: number;
   orderId?: number;
@@ -315,10 +321,10 @@ export const customerBalanceService = {
     customerId: number,
     limit: number = 50,
     offset: number = 0
-  ): Promise<{ success: boolean; data?: BalanceTransaction[]; message?: string }> => {
+  ): Promise<{ success: boolean; data?: TransactionHistoryResponse; message?: string }> => {
     try {
-      const response = await apiRequest<BalanceTransaction[]>(
-        `/customers/${customerId}/balance-history?limit=${limit}&offset=${offset}`
+      const response = await apiRequest<TransactionHistoryResponse>(
+        `/customers/${customerId}/transactions?limit=${limit}&offset=${offset}`
       );
       
       return response;

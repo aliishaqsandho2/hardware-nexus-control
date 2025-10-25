@@ -1,5 +1,5 @@
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -17,8 +17,16 @@ interface QuickCustomerFormProps {
 export function QuickCustomerForm({ open, onOpenChange, onCustomerCreated }: QuickCustomerFormProps) {
   const { toast } = useToast();
   const [name, setName] = useState("");
-  const [phone, setPhone] = useState("");
+  const [phone, setPhone] = useState("+92");
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  // Reset form when dialog opens
+  useEffect(() => {
+    if (open) {
+      setName("");
+      setPhone("+92");
+    }
+  }, [open]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -32,12 +40,21 @@ export function QuickCustomerForm({ open, onOpenChange, onCustomerCreated }: Qui
       return;
     }
 
+    if (!phone.trim() || phone.trim() === "+92") {
+      toast({
+        title: "Missing Information",
+        description: "Please provide customer phone number",
+        variant: "destructive"
+      });
+      return;
+    }
+
     setIsSubmitting(true);
 
     try {
       const customerData = {
         name: name.trim(),
-        phone: phone.trim() || "N/A", // Make phone optional, default to N/A
+        phone: phone.trim(),
         type: "Temporary", // Updated to use new enum value
         creditLimit: 0
       };
@@ -51,7 +68,7 @@ export function QuickCustomerForm({ open, onOpenChange, onCustomerCreated }: Qui
         
         // Reset form
         setName("");
-        setPhone("");
+        setPhone("+92");
         onOpenChange(false);
 
         toast({
@@ -98,12 +115,20 @@ export function QuickCustomerForm({ open, onOpenChange, onCustomerCreated }: Qui
           </div>
           
           <div className="space-y-2">
-            <Label htmlFor="phone">Phone Number (Optional)</Label>
+            <Label htmlFor="phone">Phone Number *</Label>
             <Input
               id="phone"
-              placeholder="Enter phone number (optional)"
+              placeholder="+92XXXXXXXXXX"
               value={phone}
-              onChange={(e) => setPhone(e.target.value)}
+              onChange={(e) => {
+                // Ensure +92 prefix is always present
+                const value = e.target.value;
+                if (!value.startsWith("+92")) {
+                  setPhone("+92");
+                } else {
+                  setPhone(value);
+                }
+              }}
               className="border-gray-300"
               disabled={isSubmitting}
             />
@@ -122,7 +147,7 @@ export function QuickCustomerForm({ open, onOpenChange, onCustomerCreated }: Qui
             <Button
               type="submit"
               className="flex-1 bg-blue-600 hover:bg-blue-700"
-              disabled={isSubmitting}
+              disabled={isSubmitting || !name.trim() || !phone.trim() || phone.trim() === "+92"}
             >
               {isSubmitting ? "Adding..." : "Add Customer"}
             </Button>

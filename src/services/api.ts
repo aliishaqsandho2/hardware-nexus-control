@@ -292,6 +292,25 @@ export const customersApi = {
     const query = queryParams.toString();
     return apiRequest<any>(`/customers${query ? `?${query}` : ''}`);
   },
+
+  // New: Fetch only customers with credit balances from backend
+  getCreditCustomers: (params?: {
+    page?: number;
+    per_page?: number;
+    search?: string;
+    status?: string;
+  }) => {
+    const queryParams = new URLSearchParams();
+    if (params) {
+      Object.entries(params).forEach(([key, value]) => {
+        if (value !== undefined && value !== null) {
+          queryParams.append(key, value.toString());
+        }
+      });
+    }
+    const query = queryParams.toString();
+    return apiRequest<any>(`/creditcustomers${query ? `?${query}` : ''}`);
+  },
   
   getById: (id: number) => apiRequest<ApiResponse<any>>(`/customers/${id}`),
   
@@ -306,7 +325,7 @@ export const customersApi = {
       method: 'PUT',
       body: JSON.stringify(customer),
     }),
-
+ 
   delete: (id: number) =>
     apiRequest<ApiResponse<any>>(`/customers/${id}`, {
       method: 'DELETE',

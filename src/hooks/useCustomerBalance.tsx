@@ -190,8 +190,9 @@ export const useCustomerBalance = () => {
     try {
       const result = await customerBalanceService.getTransactionHistory(customerId, limit, offset);
       
-      if (result.success) {
-        return result.data || [];
+      if (result.success && result.data) {
+        // API returns data.transactions as an array
+        return result.data.transactions || [];
       } else {
         throw new Error(result.message || 'Failed to fetch transaction history');
       }

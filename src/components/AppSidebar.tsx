@@ -91,6 +91,11 @@ const businessItems: MenuItem[] = [
     icon: Users,
   },
   {
+    title: "Credits",
+    url: "/credits",
+    icon: CreditCard,
+  },
+  {
     title: "Employees",
     url: "/employees",
     icon: UserCheck,

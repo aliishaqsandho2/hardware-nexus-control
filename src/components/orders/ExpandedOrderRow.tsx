@@ -59,6 +59,29 @@ export const ExpandedOrderRow = ({ order, onOrderUpdated }: ExpandedOrderRowProp
   
   const [isLoading, setIsLoading] = useState(false);
 
+  // Live calculations for return flow
+  const computedRefund = React.useMemo(() => {
+    let sum = 0;
+    order.items.forEach((item) => {
+      const qty = returnQuantities[item.productId] || 0;
+      if (qty > 0) sum += qty * item.unitPrice;
+    });
+    return Number(sum.toFixed(2));
+  }, [order.items, returnQuantities]);
+
+  const newSubtotal = React.useMemo(
+    () => Number((order.subtotal - computedRefund).toFixed(2)),
+    [order.subtotal, computedRefund]
+  );
+
+  const newTotal = React.useMemo(
+    () => Number((order.total - computedRefund).toFixed(2)),
+    [order.total, computedRefund]
+  );
+
+  const formatCurrency = (val: number) =>
+    `Rs. ${val.toLocaleString(undefined, { maximumFractionDigits: 2 })}`;
+
   const getStatusBadge = (status: string) => {
     const variants: Record<string, string> = {
       completed: "bg-green-500/10 text-green-600 dark:text-green-400 border-green-500/20",
@@ -186,10 +209,11 @@ export const ExpandedOrderRow = ({ order, onOrderUpdated }: ExpandedOrderRowProp
         items: itemsToReturn.map(([productId, quantity]) => ({
           productId: parseInt(productId),
           quantity,
-          reason: "customer_request"
+          reason: "customer_request",
         })),
-        adjustmentReason: returnNotes || "Order adjustment - items returned",
-        restockItems: true
+        adjustmentReason: returnNotes || "Order adjustment - items returned after completion",
+        refundAmount: computedRefund,
+        restockItems: true,
       };
 
       await salesApi.adjustOrder(order.id, returnData);
@@ -216,7 +240,7 @@ export const ExpandedOrderRow = ({ order, onOrderUpdated }: ExpandedOrderRowProp
   };
 
   return (
-    <div className="p-4 bg-muted/10 border-t border-border">
+    <div className="p-4 bg-muted/30 border-t border-border">
       {/* Compact Info Grid */}
       <div className="grid grid-cols-4 gap-4 mb-4">
         {/* Customer */}
@@ -234,7 +258,14 @@ export const ExpandedOrderRow = ({ order, onOrderUpdated }: ExpandedOrderRowProp
               <p className="text-sm font-medium text-foreground truncate">{order.customerName || "Walk-in"}</p>
             )}
           </div>
-          {isEditingCustomer && <Edit2 className="h-3 w-3 text-primary" />}
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => isEditingCustomer ? setIsEditingCustomer(false) : setIsEditingCustomer(true)}
+            className="h-7 w-7 p-0"
+          >
+            <Edit2 className="h-3 w-3" />
+          </Button>
         </div>
 
         {/* Status */}
@@ -242,22 +273,40 @@ export const ExpandedOrderRow = ({ order, onOrderUpdated }: ExpandedOrderRowProp
           <div className="min-w-0 flex-1">
             <p className="text-xs text-muted-foreground mb-1">Status</p>
             {isEditingStatus ? (
-              <Select value={editedStatus} onValueChange={setEditedStatus}>
-                <SelectTrigger className="h-7 text-sm">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="completed">Completed</SelectItem>
-                  <SelectItem value="pending">Pending</SelectItem>
-                  <SelectItem value="cancelled">Cancelled</SelectItem>
-                </SelectContent>
-              </Select>
+              <div className="flex items-center gap-1">
+                <Select value={editedStatus} onValueChange={setEditedStatus}>
+                  <SelectTrigger className="h-7 text-sm">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="completed">Completed</SelectItem>
+                    <SelectItem value="pending">Pending</SelectItem>
+                    <SelectItem value="cancelled">Cancelled</SelectItem>
+                  </SelectContent>
+                </Select>
+                <Button size="sm" variant="ghost" onClick={handleSaveStatus} disabled={isLoading} className="h-7 px-2">
+                  <Save className="h-3 w-3" />
+                </Button>
+                <Button size="sm" variant="ghost" onClick={() => setIsEditingStatus(false)} disabled={isLoading} className="h-7 px-2">
+                  <X className="h-3 w-3" />
+                </Button>
+              </div>
             ) : (
               <Badge variant="outline" className={`${getStatusBadge(order.status)} text-xs capitalize`}>
                 {order.status}
               </Badge>
             )}
           </div>
+          {!isEditingStatus && (
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => setIsEditingStatus(true)}
+              className="h-7 w-7 p-0"
+            >
+              <Edit2 className="h-3 w-3" />
+            </Button>
+          )}
         </div>
 
         {/* Payment */}
@@ -266,22 +315,40 @@ export const ExpandedOrderRow = ({ order, onOrderUpdated }: ExpandedOrderRowProp
           <div className="min-w-0 flex-1">
             <p className="text-xs text-muted-foreground mb-1">Payment</p>
             {isEditingPayment ? (
-              <Select value={editedPaymentMethod} onValueChange={setEditedPaymentMethod}>
-                <SelectTrigger className="h-7 text-sm">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="cash">Cash</SelectItem>
-                  <SelectItem value="credit">Credit</SelectItem>
-                  <SelectItem value="card">Card</SelectItem>
-                </SelectContent>
-              </Select>
+              <div className="flex items-center gap-1">
+                <Select value={editedPaymentMethod} onValueChange={setEditedPaymentMethod}>
+                  <SelectTrigger className="h-7 text-sm">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="cash">Cash</SelectItem>
+                    <SelectItem value="credit">Credit</SelectItem>
+                    <SelectItem value="card">Card</SelectItem>
+                  </SelectContent>
+                </Select>
+                <Button size="sm" variant="ghost" onClick={handleSavePayment} disabled={isLoading} className="h-7 px-2">
+                  <Save className="h-3 w-3" />
+                </Button>
+                <Button size="sm" variant="ghost" onClick={() => setIsEditingPayment(false)} disabled={isLoading} className="h-7 px-2">
+                  <X className="h-3 w-3" />
+                </Button>
+              </div>
             ) : (
               <Badge variant="outline" className={`${getPaymentBadge(order.paymentMethod)} text-xs capitalize`}>
                 {order.paymentMethod}
               </Badge>
             )}
           </div>
+          {!isEditingPayment && (
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => setIsEditingPayment(true)}
+              className="h-7 w-7 p-0"
+            >
+              <Edit2 className="h-3 w-3" />
+            </Button>
+          )}
         </div>
 
         {/* Time / Created By */}
@@ -295,52 +362,6 @@ export const ExpandedOrderRow = ({ order, onOrderUpdated }: ExpandedOrderRowProp
         </div>
       </div>
 
-      {/* Action Buttons */}
-      {(isEditingStatus || isEditingPayment || isReturning) && (
-        <div className="flex items-center gap-2 mb-4">
-          <Button 
-            size="sm" 
-            onClick={isEditingStatus ? handleSaveStatus : isEditingPayment ? handleSavePayment : handleReturn} 
-            disabled={isLoading}
-            className="h-8"
-          >
-            <Save className="h-3 w-3 mr-1" />
-            {isEditingStatus ? "Save Status" : isEditingPayment ? "Save Payment" : "Process Return"}
-          </Button>
-          <Button 
-            size="sm" 
-            variant="outline" 
-            onClick={() => {
-              setIsEditingStatus(false);
-              setIsEditingPayment(false);
-              setIsReturning(false);
-              setReturnQuantities({});
-            }}
-            disabled={isLoading}
-            className="h-8"
-          >
-            <X className="h-3 w-3 mr-1" />
-            Cancel
-          </Button>
-        </div>
-      )}
-
-      {!isEditingStatus && !isEditingPayment && !isReturning && (
-        <div className="flex items-center gap-2 mb-4">
-          <Button size="sm" variant="outline" onClick={() => setIsEditingStatus(true)} className="h-8">
-            <Edit2 className="h-3 w-3 mr-1" />
-            Edit Status
-          </Button>
-          <Button size="sm" variant="outline" onClick={() => setIsEditingPayment(true)} className="h-8">
-            <Edit2 className="h-3 w-3 mr-1" />
-            Edit Payment
-          </Button>
-          <Button size="sm" variant="outline" onClick={() => setIsReturning(true)} className="h-8">
-            <RotateCcw className="h-3 w-3 mr-1" />
-            Return/Adjust
-          </Button>
-        </div>
-      )}
 
       {/* Return Notes */}
       {isReturning && (
@@ -361,10 +382,43 @@ export const ExpandedOrderRow = ({ order, onOrderUpdated }: ExpandedOrderRowProp
           <h4 className="text-sm font-semibold text-foreground">
             Order Items ({order.items.length})
           </h4>
-          <div className="text-sm text-muted-foreground">
-            Subtotal: <span className="font-semibold text-foreground">Rs. {order.subtotal.toLocaleString()}</span>
-            <span className="mx-2">•</span>
-            Total: <span className="font-bold text-primary">Rs. {(order.subtotal - order.discount).toLocaleString()}</span>
+          <div className="flex items-center gap-3">
+            <div className="text-sm text-muted-foreground">
+              {isReturning ? (
+                <>
+                  Refund: <span className="font-semibold text-foreground">{formatCurrency(computedRefund)}</span>
+                  <span className="mx-2">•</span>
+                  New Total: <span className="font-bold text-primary">{formatCurrency(newTotal)}</span>
+                </>
+              ) : (
+                <>
+                  Subtotal: <span className="font-semibold text-foreground">{formatCurrency(order.subtotal)}</span>
+                  <span className="mx-2">•</span>
+                  Total: <span className="font-bold text-primary">{formatCurrency(order.total)}</span>
+                </>
+              )}
+            </div>
+            {isReturning ? (
+              <div className="flex items-center gap-2">
+                <Button size="sm" onClick={handleReturn} disabled={isLoading || computedRefund <= 0} className="h-7">
+                  <Save className="h-3 w-3 mr-1" />
+                  Process Return {computedRefund > 0 ? `(${formatCurrency(computedRefund)})` : ""}
+                </Button>
+                <Button size="sm" variant="outline" onClick={() => {
+                  setIsReturning(false);
+                  setReturnQuantities({});
+                  setReturnNotes("");
+                }} disabled={isLoading} className="h-7">
+                  <X className="h-3 w-3 mr-1" />
+                  Cancel
+                </Button>
+              </div>
+            ) : (
+              <Button size="sm" variant="outline" onClick={() => setIsReturning(true)} className="h-7">
+                <RotateCcw className="h-3 w-3 mr-1" />
+                Return
+              </Button>
+            )}
           </div>
         </div>
 
@@ -405,14 +459,19 @@ export const ExpandedOrderRow = ({ order, onOrderUpdated }: ExpandedOrderRowProp
                     <td className="px-3 py-2">
                       <Input
                         type="number"
+                        step="0.1"
                         min="0"
                         max={item.quantity}
-                        value={returnQuantities[item.productId] || 0}
-                        onChange={(e) => setReturnQuantities({
-                          ...returnQuantities,
-                          [item.productId]: parseInt(e.target.value) || 0
-                        })}
-                        className="w-16 h-7 text-center text-xs"
+                        value={returnQuantities[item.productId] || ""}
+                        onChange={(e) => {
+                          const value = e.target.value;
+                          setReturnQuantities({
+                            ...returnQuantities,
+                            [item.productId]: value === "" ? 0 : parseFloat(value)
+                          });
+                        }}
+                        placeholder="0"
+                        className="w-20 h-7 text-center text-xs"
                       />
                     </td>
                   )}

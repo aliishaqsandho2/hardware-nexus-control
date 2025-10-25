@@ -302,20 +302,23 @@ export const PincodeProtection: React.FC<PincodeProtectionProps> = ({
       <div className="relative z-10 flex items-center justify-center min-h-screen p-4">
         <div className={`transition-all duration-1500 ${showAnimation ? 'opacity-100 scale-100' : 'opacity-0 scale-95'}`}>
           
-          {/* Central Security Interface */}
+          {/* Central Security Interface - Circular */}
           <div className="relative">
             {/* Holographic Frame */}
-            <div className="absolute -inset-4 bg-gradient-to-r from-primary/10 via-primary/10 to-primary/10 rounded-2xl blur-xl animate-pulse"></div>
+            <div className="absolute -inset-8 bg-gradient-to-r from-primary/10 via-primary/10 to-primary/10 rounded-full blur-xl animate-pulse"></div>
             
-            <Card className="relative backdrop-blur-xl bg-card/60 border border-primary/30 shadow-2xl shadow-primary/20 rounded-2xl overflow-hidden max-w-md mx-auto">
-              {/* Tech Frame */}
-              <div className="absolute inset-0 border border-primary/20 rounded-2xl"></div>
-              <div className="absolute top-0 left-0 w-4 h-4 border-t-2 border-l-2 border-primary rounded-tl-2xl"></div>
-              <div className="absolute top-0 right-0 w-4 h-4 border-t-2 border-r-2 border-primary rounded-tr-2xl"></div>
-              <div className="absolute bottom-0 left-0 w-4 h-4 border-b-2 border-l-2 border-primary rounded-bl-2xl"></div>
-              <div className="absolute bottom-0 right-0 w-4 h-4 border-b-2 border-r-2 border-primary rounded-br-2xl"></div>
+            <div className="relative w-[380px] h-[380px] sm:w-[420px] sm:h-[420px] backdrop-blur-xl bg-card/60 border-2 border-primary/30 shadow-2xl shadow-primary/20 rounded-full overflow-hidden flex items-center justify-center">
+              {/* Animated Border Ring */}
+              <div className="absolute inset-0 border-2 border-primary/20 rounded-full"></div>
+              
+              {/* Corner Indicators positioned around circle */}
+              <div className="absolute top-8 left-1/2 -translate-x-1/2 w-1 h-8 bg-primary/50"></div>
+              <div className="absolute bottom-8 left-1/2 -translate-x-1/2 w-1 h-8 bg-primary/50"></div>
+              <div className="absolute left-8 top-1/2 -translate-y-1/2 h-1 w-8 bg-primary/50"></div>
+              <div className="absolute right-8 top-1/2 -translate-y-1/2 h-1 w-8 bg-primary/50"></div>
 
-              <CardContent className="p-8 space-y-8">
+              {/* Content Container */}
+              <div className="relative z-10 p-6 sm:p-8 space-y-6 flex flex-col items-center justify-center max-w-[320px]">
                 {/* Central Security Logo */}
                 <div className="text-center space-y-3">
                   <button
@@ -325,18 +328,18 @@ export const PincodeProtection: React.FC<PincodeProtectionProps> = ({
                     disabled={isLocked}
                   >
                     <div className="absolute inset-0 bg-primary rounded-full blur-lg opacity-50 animate-pulse"></div>
-                    <div className="relative w-20 h-20 bg-gradient-to-br from-primary to-primary/80 rounded-full flex items-center justify-center shadow-lg shadow-primary/50 transition-transform duration-300 group-hover:scale-110 group-active:scale-95">
-                      <Shield className="w-10 h-10 text-primary-foreground animate-pulse" />
+                    <div className="relative w-16 h-16 sm:w-20 sm:h-20 bg-gradient-to-br from-primary to-primary/80 rounded-full flex items-center justify-center shadow-lg shadow-primary/50 transition-transform duration-300 group-hover:scale-110 group-active:scale-95">
+                      <Shield className="w-8 h-8 sm:w-10 sm:h-10 text-primary-foreground animate-pulse" />
                       <div className="absolute inset-0 border-2 border-primary-foreground/30 rounded-full animate-spin" style={{ animationDuration: '3s' }}></div>
                     </div>
                   </button>
-                  <h2 className="text-2xl font-bold text-foreground tracking-wider">
+                  <h2 className="text-lg sm:text-xl font-bold text-foreground tracking-wider">
                     USMAN HARDWARES
                   </h2>
                 </div>
 
                 {/* Matrix-style PIN Input */}
-                <div className="space-y-6">
+                <div className="space-y-4 w-full">
                   <div className="flex justify-center">
                     <InputOTP
                       maxLength={7}
@@ -345,12 +348,12 @@ export const PincodeProtection: React.FC<PincodeProtectionProps> = ({
                       onComplete={handlePinSubmit}
                       disabled={isLocked}
                     >
-                      <InputOTPGroup className="gap-2 sm:gap-3">
+                      <InputOTPGroup className="gap-1 sm:gap-2">
                         {[...Array(7)].map((_, index) => (
                           <InputOTPSlot
                             key={index}
                             index={index}
-                            className="w-10 h-12 sm:w-12 sm:h-12 text-lg sm:text-xl font-mono font-bold border-2 border-primary/40 bg-background/60 text-primary focus:border-primary focus:ring-2 focus:ring-primary/30 focus:bg-background/80 transition-all duration-300 rounded-lg backdrop-blur-sm shadow-lg shadow-primary/20"
+                            className="w-8 h-10 sm:w-10 sm:h-12 text-base sm:text-lg font-mono font-bold border-2 border-primary/40 bg-background/60 text-primary focus:border-primary focus:ring-2 focus:ring-primary/30 focus:bg-background/80 transition-all duration-300 rounded-lg backdrop-blur-sm shadow-lg shadow-primary/20"
                           />
                         ))}
                       </InputOTPGroup>
@@ -359,7 +362,7 @@ export const PincodeProtection: React.FC<PincodeProtectionProps> = ({
 
                   {/* Biometric Scanner Effect */}
                   <div className="flex justify-center">
-                    <div className="relative w-32 h-1 bg-muted rounded-full overflow-hidden">
+                    <div className="relative w-24 sm:w-32 h-1 bg-muted rounded-full overflow-hidden">
                       <div className="absolute inset-y-0 left-0 w-4 bg-gradient-to-r from-primary to-primary/80 rounded-full animate-pulse" style={{
                         animation: 'scanner 2s ease-in-out infinite'
                       }}></div>
@@ -368,27 +371,26 @@ export const PincodeProtection: React.FC<PincodeProtectionProps> = ({
 
                   {/* Status Messages */}
                   {isLocked && (
-                    <div className="text-center p-4 bg-red-900/30 border border-red-500/50 rounded-lg backdrop-blur-sm">
+                    <div className="text-center p-3 bg-red-900/30 border border-red-500/50 rounded-full backdrop-blur-sm">
                       <div className="flex items-center justify-center gap-2 text-red-400">
-                        <AlertTriangle className="w-5 h-5 animate-pulse" />
-                        <span className="font-mono text-lg">
-                          SYSTEM LOCKED: {formatTime(timeLeft)}
+                        <AlertTriangle className="w-4 h-4 animate-pulse" />
+                        <span className="font-mono text-sm sm:text-base">
+                          LOCKED: {formatTime(timeLeft)}
                         </span>
                       </div>
                     </div>
                   )}
 
                   {attempts > 0 && !isLocked && (
-                    <div className="text-center p-4 bg-orange-900/30 border border-orange-500/50 rounded-lg backdrop-blur-sm">
-                      <span className="text-orange-400 font-mono text-lg">
-                        ATTEMPTS REMAINING: {3 - attempts}
+                    <div className="text-center p-3 bg-orange-900/30 border border-orange-500/50 rounded-full backdrop-blur-sm">
+                      <span className="text-orange-400 font-mono text-sm sm:text-base">
+                        ATTEMPTS: {3 - attempts}
                       </span>
                     </div>
                   )}
-
                 </div>
-              </CardContent>
-            </Card>
+              </div>
+            </div>
           </div>
         </div>
       </div>
